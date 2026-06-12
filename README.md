@@ -6,7 +6,7 @@ instead of being hand-built from a manual HubSpot export.
 - **Report (source workbook):** [Funnel and MQLs](https://docs.google.com/spreadsheets/d/1wkIIX66eDL5h24820dVgyZSIL8TWc-KuwGdH1bQWcQM/edit)
 - **What runs:** [`weekly-funnel-report.md`](./weekly-funnel-report.md) — the playbook a
   scheduled Claude Code session executes against HubSpot.
-- **Delivery:** Slack/email digest (links back to the live workbook).
+- **Delivery:** Slack digest to `#test-claude` (links back to the live workbook).
 - **Schedule:** Sunday **20:00 Europe/Berlin** (the HubSpot account timezone).
 
 ## How it works
@@ -33,19 +33,18 @@ The trigger itself is configured in **Claude Code on the web**, not in code:
 2. Create a **scheduled trigger**:
    - **Cadence:** weekly, Sunday, 20:00, timezone **Europe/Berlin**.
    - **Prompt:** `Run the playbook in weekly-funnel-report.md and deliver the digest.`
-3. Ensure the environment has the **HubSpot**, **Slack**, and/or **Gmail** MCP
-   connectors enabled (read access to HubSpot contacts; send access for the
-   delivery channel).
+3. Ensure the environment has the **HubSpot** and **Slack** MCP connectors
+   enabled (read access to HubSpot contacts; send access to post the digest).
 
 Docs: https://code.claude.com/docs/en/claude-code-on-the-web
 
 ## Configuration
 
-Delivery destinations and the lookback window live in the **Config** table in
+The Slack channel and the lookback window live in the **Config** table in
 [`weekly-funnel-report.md`](./weekly-funnel-report.md). Edit there:
 
-- Email recipient(s) — default `georges.pires@moonfare.com`.
-- Slack channel — unset by default; add a channel to enable Slack delivery.
+- Slack channel — `#test-claude` while testing; switch to the production
+  channel once the output is validated.
 
 ## Verified HubSpot mapping
 

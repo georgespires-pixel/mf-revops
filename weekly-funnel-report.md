@@ -9,13 +9,13 @@
 ## Goal
 
 Produce a weekly snapshot of the marketing funnel from the HubSpot CRM and
-send it as a digest (Slack and/or email). Replace the manual "HubSpot CRM
-export, pulled <date>" step that the workbook relies on today.
+post it as a Slack digest. Replace the manual "HubSpot CRM export, pulled
+<date>" step that the workbook relies on today.
 
 ## Delivery
 
 - **Format:** digest (not a full workbook rebuild).
-- **Destinations:** see `## Config` below.
+- **Destination:** Slack channel (see `## Config` below).
 - **Subject / title:** `Weekly Funnel & MQL — w/c <Monday of the reporting week> (pulled <run date>)`
 - Always link back to the live workbook so detail tabs remain available.
 
@@ -23,8 +23,7 @@ export, pulled <date>" step that the workbook relies on today.
 
 | Setting | Value |
 | --- | --- |
-| Email recipient(s) | `georges.pires@moonfare.com` |
-| Slack channel | _(unset — fill in a channel name/ID to enable, e.g. `#revops`)_ |
+| Slack channel | `#test-claude` (testing — switch to the production channel when validated) |
 | Source workbook | `1wkIIX66eDL5h24820dVgyZSIL8TWc-KuwGdH1bQWcQM` |
 | HubSpot timezone | `Europe/Berlin` (account default — confirmed) |
 | Lookback window | Current + previous 2 full months, plus current partial month/week |
@@ -110,9 +109,9 @@ Snapshot of contacts whose **current** lifecycle stage = `marketingqualifiedlead
    (e.g. previous digest). Flag any week-over-week swing that looks like a data
    issue rather than a real movement.
 6. **Build the digest** (see format below).
-7. **Deliver** to the configured destinations. If a Slack channel is set, post
-   there; always email the recipient(s). Include the workbook link.
-8. **Do not** publish anything outside the configured destinations.
+7. **Deliver** by posting the digest to the configured Slack channel. Include
+   the workbook link.
+8. **Do not** publish anything outside the configured Slack channel.
 
 ## Digest format
 

@@ -32,7 +32,7 @@ independently of the Claude routine, which stays Slack-only.
 
 | Setting | Value |
 | --- | --- |
-| Slack channel | `#test-claude` (testing — switch to the production channel when validated) |
+| Slack channel | `#funnel-and-mql-weekly-update` (ID `C0BAQ5K1UEP`) |
 | Source workbook | `1wkIIX66eDL5h24820dVgyZSIL8TWc-KuwGdH1bQWcQM` |
 | HubSpot timezone | `Europe/Berlin` (account default — confirmed) |
 | Lookback window | Current + previous 2 full months, plus current partial month/week |

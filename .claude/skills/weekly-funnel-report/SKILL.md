@@ -27,7 +27,8 @@ follow the playbook.
 
 ## Notes
 - Delivery is **Slack-only** (no email connector). Channel is set in the playbook
-  Config table (currently `#test-claude`; switch to the production channel there).
+  Config table (`#funnel-and-mql-weekly-update`). It's a **private** channel, so the
+  Claude Slack app must be a member or posting will fail.
 - Heavy data pulls: it's fine to use a sub-agent to pull/compute, but you post the
   final digest yourself after the anchor check.
 - This is also what the scheduled Sunday 20:00 CET routine runs — keep the

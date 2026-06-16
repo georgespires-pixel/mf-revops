@@ -6,7 +6,7 @@ instead of being hand-built from a manual HubSpot export.
 - **Report (source workbook):** [Funnel and MQLs](https://docs.google.com/spreadsheets/d/1wkIIX66eDL5h24820dVgyZSIL8TWc-KuwGdH1bQWcQM/edit)
 - **What runs:** [`weekly-funnel-report.md`](./weekly-funnel-report.md) — the playbook a
   scheduled Claude Code session executes against HubSpot.
-- **Delivery:** Slack digest to `#test-claude` (links back to the live workbook).
+- **Delivery:** Slack digest to `#funnel-and-mql-weekly-update` (links back to the live workbook).
 - **Schedule:** Sunday **20:00 Europe/Berlin** (the HubSpot account timezone).
 
 ## How it works
@@ -43,8 +43,8 @@ Docs: https://code.claude.com/docs/en/claude-code-on-the-web
 The Slack channel and the lookback window live in the **Config** table in
 [`weekly-funnel-report.md`](./weekly-funnel-report.md). Edit there:
 
-- Slack channel — `#test-claude` while testing; switch to the production
-  channel once the output is validated.
+- Slack channel — `#funnel-and-mql-weekly-update` (private; the Claude Slack app
+  must be invited to the channel to post).
 
 ## Verified HubSpot mapping
 

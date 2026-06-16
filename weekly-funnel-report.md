@@ -14,8 +14,13 @@ post it as a Slack digest. Replace the manual "HubSpot CRM export, pulled
 
 ## Delivery
 
-- **Format:** digest (not a full workbook rebuild).
+- **Format:** a Slack digest (headline + key tables) **plus** a workbook-style
+  Google Sheet with the full detail, linked from the digest.
 - **Destination:** Slack channel (see `## Config` below).
+- **Spreadsheet:** build a multi-tab sheet mirroring the source workbook — tabs:
+  `Funnel by Market`, `Funnel by Source`, `Funnel cascade`, `Weekly Trend`,
+  `Methodology`. Upload to Drive (or update the same file each week) and put the
+  link in the Slack post.
 - **Subject / title:** `Weekly Funnel & MQL — w/c <Monday of the reporting week> (pulled <run date>)`
 - Always link back to the live workbook so detail tabs remain available.
 
@@ -83,13 +88,17 @@ Unresponsive are off-path and excluded; do **not** back-fill prior stages for th
 - Note: D2I markets sit within ROW (Luxembourg within BeNeLux); none under UK.
 
 ### MQL
-Snapshot of contacts whose **current** lifecycle stage = `marketingqualifiedlead`.
-(Contacts who progressed to SQL/Investor are counted in those later stages.)
+- **By-Market / By-Source tables:** MQL = contacts whose **current** lifecycle
+  stage = `marketingqualifiedlead` (point-in-time snapshot; matches the workbook).
+- **Weekly-trend table:** MQL = **cumulative "reached MQL"** — current stage is
+  MQL **or beyond** (MQL + SQL + Investor). This avoids the snapshot understating
+  recent weeks where fast movers have already progressed past MQL. (Contacts who
+  progressed to SQL/Investor are still counted here as having reached MQL.)
 
 ### Calculated fields
 - `Δ (M-A)` = May minus April (full months only — never the partial month).
 - `RVF%` = RVF ÷ Registrations for that month/week (blank when registrations = 0).
-- `MQL%` (weekly) = MQL ÷ Registrations.
+- `MQL%` (weekly) = reached-MQL ÷ Registrations (uses the cumulative weekly MQL above).
 - The newest month and the first/last weeks are **partial** — label with `*` and
   read directionally, not as final.
 
@@ -114,15 +123,16 @@ Snapshot of contacts whose **current** lifecycle stage = `marketingqualifiedlead
 4. **Compute** the tables, applying the definitions above:
    - Funnel by Market (Reg / RVF / RVF% / MQL, per month + Δ M-A + partial month).
    - Funnel by Original Source (same columns).
-   - Weekly trend: Reg / RVF / MQL / RVF% / MQL% by registration week.
+   - Weekly trend: Reg / RVF / MQL(cumulative reached ≥MQL) / RVF% / MQL% by registration week.
    - Funnel cascade totals (Registration → Pre-Qualified → MQL → SQL → Investor).
    - Reconcile: market subtotals must sum to the grand total.
 5. **Sanity-check** against last week if a prior run's numbers are available
    (e.g. previous digest). Flag any week-over-week swing that looks like a data
    issue rather than a real movement.
-6. **Build the digest** (see format below).
-7. **Deliver** by posting the digest to the configured Slack channel. Include
-   the workbook link.
+6. **Build the digest** (see format below) **and the spreadsheet** (tabs listed
+   under Delivery). Upload the sheet to Drive and get a shareable link.
+7. **Deliver** by posting the digest to the configured Slack channel, including
+   the link to this week's spreadsheet and to the source workbook.
 8. **Do not** publish anything outside the configured Slack channel.
 
 ## Digest format

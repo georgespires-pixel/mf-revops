@@ -30,12 +30,22 @@ post it as a Slack digest. Replace the manual "HubSpot CRM export, pulled
 
 ## Definitions (must match the workbook Methodology tab)
 
+### Registration cohort (VERIFIED — this defines the universe)
+A "registration" = a contact where **both**:
+- `registration_date` falls within the reporting period (this is the cohort key,
+  **not** `createdate`), AND
+- `partner_name` is one of **`Moonfare`**, **`Moonfare US`**, **`Moonfare Private
+  Office`** (Moonfare-direct only; excludes partner/offline/imported contacts).
+
+Verified against HubSpot: this reproduces the workbook exactly — May 2026 = 451
+(workbook 451). (Apr = 435 vs 436 and Jun 1–8 = 144 vs 123 differ only because
+live data has moved since the 08-Jun manual snapshot.) Bucket each contact into
+month/week by `registration_date` (weeks commence Monday).
+
 ### Markets (Territory)
-`US`, `UK`, `DACH`, `BeNeLux`, `APAC`, `ROW`, `Israel`. These come from the
-contact's **Territory** property. At runtime, discover the exact property:
-search contact properties for `territory` / `market` and confirm the enum
-labels match the seven markets above before grouping. `country` (Country of
-Residence) is the fallback and is also needed for the D2I rule below.
+`US`, `UK`, `DACH`, `BeNeLux`, `APAC`, `ROW`, `Israel`, from the contact's
+**`territory`** property (verified internal name). `country` (Country of
+Residence) is still needed for the D2I RVF rule below.
 
 ### Original Source
 Group by contact property **`hs_analytics_source`** (label "Original Source").
@@ -46,7 +56,7 @@ Social, Other Campaigns, Referrals, Paid Social.
 ### Lifecycle stages (`lifecyclestage`) — verified enum values
 | Workbook stage | HubSpot value |
 | --- | --- |
-| Registration | any contact (all registered contacts) |
+| Registration | any contact in the verified cohort above (any lifecycle stage, incl. off-path) |
 | Pre-Qualified (PQL) | `lead` |
 | Marketing Qualified Lead (MQL) | `marketingqualifiedlead` |
 | Sales Qualified Lead (SQL) | `salesqualifiedlead` |
@@ -89,16 +99,18 @@ Snapshot of contacts whose **current** lifecycle stage = `marketingqualifiedlead
    the two most recent *complete* calendar months, plus the current *partial*
    month, plus the trailing ~11 weeks for the weekly trend (by registration week,
    weeks commencing Monday). Mark partial periods with `*`.
-2. **Discover/confirm properties.** Confirm the Territory property name and the
-   `hs_analytics_source` enum labels (use `search_properties` / `get_properties`).
-   Confirm the Suitability-status and Investor-Type property names the same way
-   (search keywords like `suitability`, `investor_type`).
-3. **Pull contacts** with `search_crm_objects` on `contacts`, paginating fully
-   (check the `total` count — do not stop at one page). Pull the properties:
-   `lifecyclestage`, `hs_analytics_source`, `country`, Territory, registration
-   date, suitability status, investor type, `your_goals_with_moonfare`,
-   `d2i_estimated_financial_portfolio_size`. Use the contact's registration date
-   to bucket into month/week.
+2. **Confirm properties.** Verified internal names: `registration_date`,
+   `partner_name`, `territory`, `lifecyclestage`, `hs_analytics_source`,
+   `country`, `your_goals_with_moonfare`, `d2i_estimated_financial_portfolio_size`.
+   Still confirm the Suitability-status and Investor-Type property names at
+   runtime (search keywords `suitability`, `investor_type`).
+3. **Pull the cohort** with `search_crm_objects` on `contacts`, filtered to
+   `registration_date` in the period **AND** `partner_name` IN
+   (`Moonfare`, `Moonfare US`, `Moonfare Private Office`). Paginate fully (check
+   `total` — do not stop at one page). Pull: `registration_date`, `partner_name`,
+   `territory`, `lifecyclestage`, `hs_analytics_source`, `country`, suitability
+   status, investor type, `your_goals_with_moonfare`,
+   `d2i_estimated_financial_portfolio_size`. Bucket by `registration_date`.
 4. **Compute** the tables, applying the definitions above:
    - Funnel by Market (Reg / RVF / RVF% / MQL, per month + Δ M-A + partial month).
    - Funnel by Original Source (same columns).

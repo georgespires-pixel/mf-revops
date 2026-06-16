@@ -18,7 +18,9 @@ post it as a Slack digest. Replace the manual "HubSpot CRM export, pulled
   or updated for now (the available Google tools can't write into the existing
   workbook in place; revisit via Apps Script later — see "Future" below).
 - **Destination:** Slack channel (see `## Config` below).
-- Link the source workbook in the post for full historical detail.
+- **Do NOT link the source workbook in the post** — it is not auto-updated, so a
+  link would point leadership at stale data. (Re-add only once the Apps Script
+  is live and refreshing the workbook.)
 
 ### In-place workbook refresh (optional, separate from this routine)
 To refresh the **original** workbook weekly, use the Google Apps Script in
@@ -26,7 +28,6 @@ To refresh the **original** workbook weekly, use the Google Apps Script in
 directly, writes `Live …` tabs). Setup: `apps-script/README.md`. This runs
 independently of the Claude routine, which stays Slack-only.
 - **Subject / title:** `Weekly Funnel & MQL — w/c <Monday of the reporting week> (pulled <run date>)`
-- Always link back to the live workbook so detail tabs remain available.
 
 ## Config (edit these)
 
@@ -134,8 +135,8 @@ Unresponsive are off-path and excluded; do **not** back-fill prior stages for th
    (e.g. previous digest). Flag any week-over-week swing that looks like a data
    issue rather than a real movement.
 6. **Build the digest** (see format below).
-7. **Deliver** by posting the digest to the configured Slack channel; link the
-   source workbook for full detail. Do not create or update any Google Sheet.
+7. **Deliver** by posting the digest to the configured Slack channel. Do not link
+   the source workbook and do not create or update any Google Sheet.
 8. **Do not** publish anything outside the configured Slack channel.
 
 ## Digest format
@@ -159,11 +160,10 @@ US     ...
 UK     ...
 ... (seven markets) ...
 
-WEEKLY TREND (Reg / RVF / MQL)
+WEEKLY TREND (Reg / RVF / MQL cumulative reached)
 w/c <date> ...   (trailing ~8 weeks; mark partial weeks *)
-
-Full detail: <workbook link>
 ```
+(No workbook link — the source sheet is not auto-updated.)
 
 ## Notes / caveats to carry into the digest
 - RVF and MQL are defined independently — not a strictly nested cascade.

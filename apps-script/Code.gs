@@ -44,13 +44,14 @@ function runWeeklyFunnelReport() {
   writeReport_(agg);
 }
 
-/** One-time: schedule a weekly Sunday 20:00 run (project timezone = Europe/Berlin). */
+/** One-time: schedule a weekly Sunday 19:45 run (project timezone = Europe/Berlin).
+ *  19:45 so the sheet is refreshed ~15 min before the Claude Slack digest (20:00). */
 function createWeeklyTrigger() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'runWeeklyFunnelReport') ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('runWeeklyFunnelReport')
-    .timeBased().onWeekDay(ScriptApp.WeekDay.SUNDAY).atHour(20).nearMinute(0).create();
+    .timeBased().onWeekDay(ScriptApp.WeekDay.SUNDAY).atHour(19).nearMinute(45).create();
 }
 
 // ---------- HubSpot ----------

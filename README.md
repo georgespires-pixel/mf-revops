@@ -6,7 +6,7 @@ instead of being hand-built from a manual HubSpot export.
 - **Report (source workbook):** [Funnel and MQLs](https://docs.google.com/spreadsheets/d/1wkIIX66eDL5h24820dVgyZSIL8TWc-KuwGdH1bQWcQM/edit)
 - **What runs:** [`weekly-funnel-report.md`](./weekly-funnel-report.md) — the playbook a
   scheduled Claude Code session executes against HubSpot.
-- **Delivery:** Slack digest to `#funnel-and-mql-weekly-update` (links back to the live workbook).
+- **Delivery:** Slack digest to `#funnel-and-mql-weekly-update` (no workbook link — the source sheet isn't auto-updated).
 - **Schedule:** Sunday **20:00 Europe/Berlin** (the HubSpot account timezone).
 
 ## How it works

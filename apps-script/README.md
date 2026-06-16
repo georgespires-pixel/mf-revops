@@ -35,7 +35,7 @@ It applies the same logic as the playbook (`../weekly-funnel-report.md`): cohort
    - Check the new `Live …` tabs populate and `Live Methodology` shows the count.
 
 5. **Schedule it**
-   - Run `createWeeklyTrigger` once → installs a weekly trigger for **Sunday 20:00**
+   - Run `createWeeklyTrigger` once → installs a weekly trigger for **Sunday 19:45**
      (project timezone). Verify under **Triggers** (clock icon).
 
 ## Notes

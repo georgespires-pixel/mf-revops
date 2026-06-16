@@ -1,6 +1,6 @@
 ---
 name: weekly-funnel-report
-description: Generate Moonfare's weekly Funnel & MQL report from live HubSpot and post the digest + spreadsheet to Slack. Use when asked to run, refresh, or send the weekly funnel report, the RevOps funnel digest, or the "Funnel and MQLs" report — on demand or on the Sunday schedule.
+description: Generate Moonfare's weekly Funnel & MQL report from live HubSpot and post the digest to Slack. Use when asked to run, refresh, or send the weekly funnel report, the RevOps funnel digest, or the "Funnel and MQLs" report — on demand or on the Sunday schedule.
 ---
 
 # Weekly Funnel & MQL report
@@ -18,8 +18,9 @@ follow the playbook.
    `registration_date` in the reporting period **AND** `partner_name` IN
    (`Moonfare`, `Moonfare US`, `Moonfare Private Office`). Market = `territory`.
 3. Compute the tables (weekly MQL = cumulative "reached MQL"; market/source MQL =
-   current-stage), build the workbook-style Google Sheet, and post the Slack
-   digest with the spreadsheet link to the channel in the playbook's Config table.
+   current-stage) and post the Slack digest to the channel in the playbook's
+   Config table. **Do not create or update any Google Sheet** for now — just link
+   the source workbook in the post.
 4. Before posting, sanity-check the anchor: the most recent **full** month's
    total should reconcile to the workbook basis (e.g. May 2026 = 451). Flag
    material differences rather than posting silently.

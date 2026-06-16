@@ -14,13 +14,16 @@ post it as a Slack digest. Replace the manual "HubSpot CRM export, pulled
 
 ## Delivery
 
-- **Format:** a Slack digest (headline + key tables) **plus** a workbook-style
-  Google Sheet with the full detail, linked from the digest.
+- **Format:** a Slack digest (headline + key tables). No Google Sheet is created
+  or updated for now (the available Google tools can't write into the existing
+  workbook in place; revisit via Apps Script later — see "Future" below).
 - **Destination:** Slack channel (see `## Config` below).
-- **Spreadsheet:** build a multi-tab sheet mirroring the source workbook — tabs:
-  `Funnel by Market`, `Funnel by Source`, `Funnel cascade`, `Weekly Trend`,
-  `Methodology`. Upload to Drive (or update the same file each week) and put the
-  link in the Slack post.
+- Link the source workbook in the post for full historical detail.
+
+### Future (not active)
+To refresh the **original** workbook in place weekly, use a Google Apps Script
+bound to that sheet with a time-driven trigger (calls HubSpot directly, rewrites
+the tabs). Not enabled yet — pending decision.
 - **Subject / title:** `Weekly Funnel & MQL — w/c <Monday of the reporting week> (pulled <run date>)`
 - Always link back to the live workbook so detail tabs remain available.
 
@@ -129,10 +132,9 @@ Unresponsive are off-path and excluded; do **not** back-fill prior stages for th
 5. **Sanity-check** against last week if a prior run's numbers are available
    (e.g. previous digest). Flag any week-over-week swing that looks like a data
    issue rather than a real movement.
-6. **Build the digest** (see format below) **and the spreadsheet** (tabs listed
-   under Delivery). Upload the sheet to Drive and get a shareable link.
-7. **Deliver** by posting the digest to the configured Slack channel, including
-   the link to this week's spreadsheet and to the source workbook.
+6. **Build the digest** (see format below).
+7. **Deliver** by posting the digest to the configured Slack channel; link the
+   source workbook for full detail. Do not create or update any Google Sheet.
 8. **Do not** publish anything outside the configured Slack channel.
 
 ## Digest format

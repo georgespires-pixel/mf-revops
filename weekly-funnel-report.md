@@ -20,10 +20,11 @@ post it as a Slack digest. Replace the manual "HubSpot CRM export, pulled
 - **Destination:** Slack channel (see `## Config` below).
 - Link the source workbook in the post for full historical detail.
 
-### Future (not active)
-To refresh the **original** workbook in place weekly, use a Google Apps Script
-bound to that sheet with a time-driven trigger (calls HubSpot directly, rewrites
-the tabs). Not enabled yet — pending decision.
+### In-place workbook refresh (optional, separate from this routine)
+To refresh the **original** workbook weekly, use the Google Apps Script in
+`apps-script/Code.gs` (bound to the sheet, weekly time trigger, calls HubSpot
+directly, writes `Live …` tabs). Setup: `apps-script/README.md`. This runs
+independently of the Claude routine, which stays Slack-only.
 - **Subject / title:** `Weekly Funnel & MQL — w/c <Monday of the reporting week> (pulled <run date>)`
 - Always link back to the live workbook so detail tabs remain available.
 

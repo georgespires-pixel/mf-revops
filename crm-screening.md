@@ -62,37 +62,45 @@ HubSpot, 4 separate field updates per lead) with:
 **BD score (prioritisation) — CONFIRMED:** use the native **`hubspotscore`**
 ("HubSpot Score" — sales-readiness). Sort the queue by it, descending.
 
-**Qualify-action write targets — the fields span TWO objects:**
+**Qualify-action write targets — the fields span TWO objects, and the current
+HubSpot MCP connector is READ-ONLY for the CRM (no create/update tool):**
 
-| Field to set | Object | Internal name | Writable via current HubSpot MCP? |
+| Field to set | Object | Read via MCP? | Write via MCP? |
 | --- | --- | --- | --- |
-| Lead stage → MQL (`lifecyclestage = marketingqualifiedlead`) | **Contact** | `lifecyclestage` | ✅ yes |
-| Contact Owner (by country) | **Contact** | `hubspot_owner_id` | ✅ already a native HubSpot workflow — do NOT set here |
-| Business Development → `Yes` | **Lead** (HubSpot Leads object, `0-136`) | TBC | ❌ **no** — see constraint |
-| Lead type → `New Business` | **Lead** (HubSpot Leads object, `0-136`) | TBC | ❌ **no** — see constraint |
+| Lead stage → MQL (`lifecyclestage = marketingqualifiedlead`) | **Contact** | ✅ yes | ❌ no (connector is read-only) |
+| Contact Owner (by country) | **Contact** | ✅ yes | n/a — native HubSpot workflow assigns it; do NOT set here |
+| Business Development → `Yes` | **Lead** (HubSpot Leads object, `0-136`) | ❌ no (object unsupported) | ❌ no |
+| Lead type → `New Business` | **Lead** (HubSpot Leads object, `0-136`) | ❌ no (object unsupported) | ❌ no |
 
-> **CONSTRAINT (verified 2026-06-29).** `business_development`, `lead_type`,
-> `lead_label`, `is_target_account` do **not** exist on `contacts` (HubSpot
-> returned them as not-found). They live on the **Leads object**, and the
-> currently-connected HubSpot MCP **does not support the Leads object** (`leads`
-> and `0-136` both return "object type not supported" for read and write). So
-> Pass B can set the **contact** lifecycle stage today, but **cannot** set
-> Business Development / Lead type through this connector.
+> **CONSTRAINT (verified 2026-06-29).** Two stacked limits on the connected
+> HubSpot MCP:
+> 1. **Read-only CRM** — the connector exposes only read tools (`search_crm_objects`,
+>    `get_crm_objects`, `query_crm_data`, `get_properties`); there is **no
+>    create/update CRM tool**. So even the **contact** `lifecyclestage` cannot be
+>    written through the MCP.
+> 2. **Leads object unsupported** — `business_development`, `lead_type`,
+>    `lead_label`, `is_target_account` are not on `contacts` (returned not-found);
+>    they live on the **Leads object**, which the MCP cannot even read (`leads`
+>    and `0-136` both return "object type not supported").
+>
+> Net: **Pass B cannot write any field through this MCP.** A write-capable path is
+> required regardless of object.
 >
 > **Resolution (pick one — see "Pass B write path" below):**
-> 1. **HubSpot workflow fan-out (recommended).** Claude sets `lifecyclestage =
->    marketingqualifiedlead` (+ optionally one contact-level "BD qualified" flag);
->    a native HubSpot workflow sets Business Development=Yes & Lead type=New
->    Business on the associated Lead and assigns the owner — same pattern as the
->    existing owner-by-country workflow. No token for Claude; one-time admin build.
-> 2. **Private-app token + REST.** Admin creates a HubSpot private app with
->    `crm.objects.leads` read/write; Claude writes the Lead fields directly via
->    REST (mirrors `apps-script/Code.gs`). Full control; Claude holds a token.
-> 3. **n8n owns the write-back.** n8n's HubSpot node updates the Lead object;
->    Claude does enrich/score/approve only. Two platforms to maintain.
+> 1. **Private-app token + REST (recommended).** Admin creates a HubSpot private
+>    app with contacts + `crm.objects.leads` read/write scopes; the screening
+>    session writes all fields directly via REST (mirrors `apps-script/Code.gs`).
+>    Self-contained, covers both objects. Claude holds a scoped token.
+> 2. **n8n owns the write-back.** Claude enriches/scores/gets approval; n8n's
+>    HubSpot node writes both objects. Two platforms to maintain.
+> 3. **(Optional complement) HubSpot workflow fan-out.** A native workflow can set
+>    the Lead-object fields + owner once a single contact trigger is set — but
+>    setting that trigger still needs a write, so this only *reduces* what path 1/2
+>    must write; it is not a standalone solution.
 >
-> Until one is chosen + set up, Pass B writes **only** the contact lifecycle stage
-> and reports the Lead-object fields as "pending write path" in the Slack thread.
+> Until a write path is set up, Pass A (enrich + score + Slack proposal) runs
+> fully, but Pass B performs **no** HubSpot writes — it reports proposed changes in
+> the Slack thread only.
 
 ## Enrichment (pluggable — this is the swappable LinkedIn replacement)
 
@@ -229,16 +237,15 @@ auto-qualifies only `MQL + high confidence + score ≥ 85` (see Config / Phase 2
 ### Pass B — Apply (execute approved decisions)
 
 7. **Read approvals** from the Slack thread/reactions. For each ✅ Qualify, perform
-   the qualify action (one logical update), respecting the two-object split:
-   - **Contact (this MCP):** `lifecyclestage` → `marketingqualifiedlead`.
-   - **Lead object:** Business Development → `Yes`, Lead type → `New Business` —
-     via the chosen **Pass B write path** (HubSpot workflow fan-out / private-app
-     REST / n8n). Until a path is live, set the contact stage only and report
-     these two as "pending write path".
+   the qualify action via the chosen **Pass B write path** (private-app REST / n8n
+   — the read-only MCP cannot write either object):
+   - **Contact:** `lifecyclestage` → `marketingqualifiedlead`.
+   - **Lead object:** Business Development → `Yes`, Lead type → `New Business`.
    - **Do NOT set Contact Owner** — the native HubSpot workflow assigns it by
      `country` once the stage changes. (BPMN `Task_5` stays automated.)
-   For each ❌ / deferred-as-Skip, record the skip reason (note or property) but do
-   not change lifecycle.
+   Until a write path is live, write nothing and report the proposed changes in the
+   Slack thread. For each ❌ / deferred-as-Skip, record the skip reason but do not
+   change lifecycle.
 8. **Confirm** back in the Slack thread: per-lead ✅ applied / ❌ skipped / ⚠️
    errored, plus a one-line batch summary. Never write outside HubSpot + the
    configured Slack channel.

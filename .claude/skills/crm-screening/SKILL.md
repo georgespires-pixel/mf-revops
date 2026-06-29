@@ -39,7 +39,13 @@ decision logic — follow the playbook.
 - Keep this skill and `crm-screening.md` in sync.
 
 ## Status / open items before first live run
-- [ ] Confirm + fill the HubSpot property names in the playbook's mapping table.
-- [ ] Confirm/create the Slack channel and invite the Claude app.
+- [x] BD score for prioritisation = native `hubspotscore` (confirmed).
+- [x] Slack approval channel = `#test-claude` (confirmed, interim).
+- [ ] **Choose + set up a Pass B write path.** The connected HubSpot MCP is
+  **read-only** (no CRM update tool) and **cannot read/write the Leads object**
+  where Business Development + Lead type live. Pass B writes need a private-app
+  token + REST (recommended) or n8n. Until then Pass B writes nothing.
+- [ ] Confirm the Leads-object internal names for Business Development + Lead type
+  (and the "New Business" value) once a write path can reach that object.
 - [ ] Ratify the qualification rubric (weights + threshold) with Yijia/BD.
 - [ ] (Optional) Wire a compliant enrichment API (Apollo/PDL/Clearbit).

@@ -1,4 +1,16 @@
-# mf-revops — Weekly Funnel & MQL Automation
+# mf-revops — RevOps Automation
+
+Claude Code playbooks that automate Moonfare RevOps/BD workflows against HubSpot
+and Slack. Two automations live here today:
+
+| Automation | Playbook | Skill | Delivery |
+| --- | --- | --- | --- |
+| Weekly Funnel & MQL report | [`weekly-funnel-report.md`](./weekly-funnel-report.md) | `/weekly-funnel-report` | Slack digest, Sunday 20:00 CET |
+| BD CRM screening (Phase 1) | [`crm-screening.md`](./crm-screening.md) | `/crm-screening` | Slack approval queue → HubSpot writes |
+
+---
+
+## Weekly Funnel & MQL Automation
 
 Automates the **"Funnel and MQLs"** report so it lands every **Sunday evening**
 instead of being hand-built from a manual HubSpot export.
@@ -61,3 +73,32 @@ The Slack channel and the lookback window live in the **Config** table in
 
 Territory, Suitability status and Investor Type property names are confirmed at
 runtime by the playbook (step 2) before grouping.
+
+## BD CRM Screening Automation (Phase 1)
+
+Automates the daily **Business Development CRM screening** loop (~3 hrs/day, ~66
+hrs/month) that qualifies pre-qualified leads (PQLs) in HubSpot.
+
+- **What runs:** [`crm-screening.md`](./crm-screening.md) — the playbook a
+  scheduled Claude Code session executes (skill: `/crm-screening`).
+- **Phase 1 = human-approved copilot.** Per lead, Claude enriches (compliant
+  enrichment API or web search — **no LinkedIn scraping**), scores against a
+  written rubric, and posts a **Qualify/Skip proposal** to Slack. A human reacts
+  ✅/❌; Claude then applies approved decisions to HubSpot as **one** action
+  (`lifecyclestage → marketingqualifiedlead`, Business Development = Yes, Lead
+  Type = New Business). Contact Owner is left to the existing native HubSpot
+  workflow (assigned by country).
+- **Phase 2 (documented, OFF):** auto-qualify high-confidence leads once the
+  rubric is trusted.
+
+### Why Claude Code (not n8n)
+The hard part of this process is **judgement** (enrich → "good info to qualify?"),
+which only an LLM does; n8n would still need an LLM node and a second system to
+maintain. The deterministic HubSpot writes are a handful of field updates Claude
+does via the HubSpot MCP, and owner routing already runs as a native HubSpot
+workflow. Reuses the same infra as the funnel automation — no new platform.
+
+### Open items before first live run
+See the checklist at the bottom of `.claude/skills/crm-screening/SKILL.md`:
+confirm HubSpot property names (BD score, Business Development, Lead Type),
+confirm/create the Slack channel, and ratify the rubric with BD.

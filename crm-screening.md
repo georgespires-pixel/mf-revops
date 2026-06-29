@@ -41,11 +41,11 @@ HubSpot, 4 separate field updates per lead) with:
 
 | Setting | Value |
 | --- | --- |
-| Slack channel (approval queue) | `#bd-crm-screening` — **TODO confirm / create** (private → invite the Claude Slack app) |
+| Slack channel (approval queue) | `test-claude` (interim test channel; move to a dedicated BD channel for production) |
 | Run cadence | Daily, weekday mornings (Phase 1). Upgrade path: per-PQL event trigger. |
 | Queue size cap per run | `25` leads (tune to volume) |
 | Auto-qualify (Phase 2) | **OFF** in Phase 1 |
-| Auto-qualify confidence threshold (Phase 2) | `0.85` (not used until Phase 2 is enabled) |
+| Auto-qualify rule (Phase 2) | `qualification = MQL` AND `confidence = high` AND `score ≥ 85` (not used until Phase 2 is enabled) |
 | HubSpot timezone | `Europe/Berlin` (account default) |
 
 ## HubSpot property mapping
@@ -91,27 +91,97 @@ satisfied each lead.
 > ban + GDPR exposure for a regulated firm. Keep LinkedIn as an optional *manual*
 > check the approver does in Slack, not an automated step.
 
-## Qualification rubric (the decision logic — EDIT WITH BD)
+## Qualification rubric (the decision logic)
 
-> **TODO: Yijia/BD to ratify.** This is a first-draft, explicit version of the
-> two "Good info to qualify?" gateways. Output a score 0–1 and a Qualify/Skip
-> call. The point is consistency — every lead judged the same way.
+> The agent's **role:** evaluate enriched HubSpot contact data (augmented with web
+> search) and classify whether the lead should be promoted to MQL. This is the
+> explicit, written version of the two "Good info to qualify?" BPMN gateways — the
+> point is consistency: every lead judged the same way.
+>
+> **Context.** BD targets High-Net-Worth and Ultra-High-Net-Worth individuals for
+> a wealth/asset-management offering. The ideal client profile is **NOT** limited
+> to finance — successful business owners and senior operators across **any**
+> industry can qualify, provided there are credible signals of wealth, seniority,
+> and decision-making authority.
 
-Score = weighted signals (tune weights with BD):
+### Evaluate four dimensions (weigh holistically — no single one disqualifies)
 
-| Signal | Weight | Qualifies when… |
-| --- | --- | --- |
-| Investable wealth / seniority (role, firm, title) | high | Senior/decision-maker, or wealth indicators present |
-| Country in a served market | medium | `country` maps to an active Moonfare market |
-| Questionnaire intent | medium | `your_goals_with_moonfare` / portfolio size indicate real intent |
-| BD threshold score | medium | At/above the agreed BD threshold |
-| Disqualifiers | veto | Competitor, sanctioned/restricted jurisdiction, junk/test contact, clearly not investor |
+**1. Seniority (weight: HIGH)**
+- *Strong:* C-suite (CEO/CFO/COO/CIO/Founder/Co-Founder/Owner/Partner/Managing
+  Director/Managing Partner); Head of / Global Head of / President / Vice Chair /
+  Chair; 15+ yrs relevant experience; board seats / multiple directorships.
+- *Weak:* Associate, Analyst, Coordinator, Assistant, Junior, Intern; <5 yrs
+  experience; individual contributor with no leadership scope.
 
-Decision:
-- **score ≥ qualify-threshold AND no veto → Qualify** (confidence = score).
-- **veto present → Skip** (reason = the disqualifier).
-- **otherwise → Skip with "insufficient info"** (so it can be re-queued if
-  enrichment improves — addresses the "enrichment gaps = lost lead" pain).
+**2. Industry relevance (weight: MEDIUM — do NOT over-index)**
+- *Preferred:* PE, VC, Hedge Funds; Investment Banking, Corporate Finance, M&A;
+  Law firms (esp. partners at top-tier); Technology (funded/scaled founders &
+  senior execs); Family Offices, Wealth Management.
+- *Also acceptable (do not penalise):* industrial, manufacturing, real estate,
+  energy, healthcare, consumer goods — when the contact is an owner, founder, or
+  very senior operator; any sector with signals of significant personal wealth or
+  business scale.
+- **Rule:** being outside finance is NOT a reason to disqualify. An MD at an
+  investment bank and the owner of a mid-market industrial business can both be
+  excellent leads.
+
+**3. Company quality (weight: MEDIUM)**
+- *Strong:* well-known / tier-1 firm (bulge-bracket bank, top-tier PE/VC, magic
+  circle law firm); scaled business (revenue, headcount, funding, press);
+  established track record.
+- *Weak:* unverifiable company, no digital footprint, dormant; very early-stage
+  with no traction and no founder wealth signals.
+
+**4. Wealth / decision-making signals (weight: HIGH)**
+- *Strong:* founder/owner equity in a successful business; public mentions of
+  exits, acquisitions, fundraising; board seats, investor profiles, philanthropy;
+  senior titles at firms where partner/MD-level comp is typical.
+
+### Decision rules
+- **MQL** → at least **2 of 4** signals are *strong* AND nothing clearly
+  disqualifying. Score typically **≥ 65**.
+- **NEEDS_REVIEW** → mixed signals, ambiguous seniority, or thin web-search
+  results. Score typically **40–64**. Use this when a human should make the call
+  rather than auto-rejecting a potentially good lead.
+- **NOT_MQL** → clearly junior with no offsetting wealth/ownership signals, or a
+  fabricated/unverifiable profile. Score typically **< 40**.
+
+### Guardrails
+- Judge **only** on the input data — do not invent facts.
+- If web-search snippets are empty/irrelevant, say so in `missing_information` and
+  lean **NEEDS_REVIEW**, not NOT_MQL (protects the "enrichment gaps = lost lead"
+  pain point — a thin profile is re-queueable, not a hard reject).
+- Do **not** disqualify solely for a non-finance industry — check ownership/wealth
+  first.
+- Do **not** over-qualify on a prestigious company name alone if the contact's own
+  role is junior.
+
+### Per-lead output (the agent returns this object, used to build the Slack proposal)
+```json
+{
+  "qualification": "MQL | NEEDS_REVIEW | NOT_MQL",
+  "confidence": "high | medium | low",
+  "score": 0,
+  "reasoning": "2–4 sentences citing specific evidence",
+  "signals": {
+    "seniority": "strong | moderate | weak | unclear",
+    "industry": "preferred | acceptable | weak | unclear",
+    "company_quality": "strong | moderate | weak | unclear",
+    "wealth_signals": "strong | moderate | weak | unclear"
+  },
+  "key_evidence": ["specific fact 1", "specific fact 2"],
+  "missing_information": ["what would raise confidence"]
+}
+```
+
+### How the three classes map to the Slack approval queue (Phase 1)
+- **MQL** → proposed action **Qualify** (✅ to confirm).
+- **NEEDS_REVIEW** → proposed action **Review** — surfaced prominently for a human
+  call (✅ qualifies, ❌ skips).
+- **NOT_MQL** → proposed action **Skip** (❌; ✅ overrides to qualify).
+
+In Phase 1 **every** class is human-approved before any HubSpot write. Phase 2
+auto-qualifies only `MQL + high confidence + score ≥ 85` (see Config / Phase 2).
 
 ## Steps
 

@@ -63,7 +63,14 @@ This returns every open ticket with its department. Note `customfield_10354` may
 (no department set) — bucket those as "Unassigned" in the department breakdown.
 
 If the result is returned via a stored tool-results file (large payload), read it with
-`bash`/python (`json.loads` the inner `text` field) rather than assuming inline JSON.
+`bash`/python (`json.loads` the inner `text` field) rather than assuming inline JSON. The
+payload shape is `{issues: {nodes: [...], pageInfo: {hasNextPage, endCursor}}}`.
+
+**Pagination.** This Jira search MCP is **cursor-based**, not offset-based: check
+`issues.pageInfo.hasNextPage` and, if `true`, re-call with `nextPageToken` = the previous
+`pageInfo.endCursor` and accumulate `nodes`. Do NOT rely on `isLast`/`startAt` (old REST
+API fields — they are not returned here). The board is ~52 open tickets today (single page),
+but don't assume one page is complete without checking `hasNextPage`.
 
 ### Step 2 — Identify the open Sales bugs
 
@@ -131,10 +138,25 @@ a ticket-type bar, and the Sales drill-down. Put the written tables, the top-pri
 ticket list, and the open-Sales-bug list in the response prose (not inside the widget). Follow
 the house visual rules in the read_me.
 
+**If the `visualize` connector is not available** (no `visualize:*` tools in this session), do
+NOT stall or error — this step is presentation-only. Render the report inline as text/tables
+instead (the same content as the Slack post, including the block-bar department breakdown) and
+continue to Step 6. The Slack delivery does not depend on the visualizer. Note in your reply
+that the inline pie chart was skipped because the connector wasn't enabled.
+
 ### Step 6 — Post to Slack
 
 Three posts: (a) the clean report as the main message, then two thread replies under it — (b) the
 machine-readable snapshot, and (c) the latest-status update on top-priority tickets.
+
+**Formatting dialect.** The templates below are written in Slack-native mrkdwn (`*bold*`,
+triple-backtick code blocks, `<url|text>` links). The `slack_send_message` tool in this
+environment accepts **standard markdown** (`**bold**`, `[text](url)`) and converts it to Slack
+formatting on send — verified: `**bold**` → bold, `[KEY](url)` → a quiet `<url|KEY>` link,
+fenced blocks → monospace. So write the message in **standard markdown**; do NOT hand the tool
+raw single-star `*text*` (it renders as italic). Either dialect's intent is the same; just be
+consistent with whichever the live tool documents. (The connector also auto-appends a
+"Sent using @Claude" line — that's expected and outside this skill's control.)
 
 **Quiet ticket links.** Every Jira ticket key in the message MUST be written as a Slack inline
 link so it renders as a clickable key WITHOUT unfurling into a big preview card:

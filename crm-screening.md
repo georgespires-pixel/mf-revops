@@ -102,6 +102,32 @@ HubSpot MCP connector is READ-ONLY for the CRM (no create/update tool):**
 > fully, but Pass B performs **no** HubSpot writes — it reports proposed changes in
 > the Slack thread only.
 
+### Pass B write path — private-app token + REST (chosen)
+
+One-time admin setup (HubSpot → Settings → Integrations → **Private Apps** →
+Create), then store the token as `HUBSPOT_BD_WRITE_TOKEN` in the session env
+(never commit it). **Scopes:**
+- `crm.objects.contacts.read`, `crm.objects.contacts.write` — set `lifecyclestage`.
+- `crm.objects.leads.read`, `crm.objects.leads.write` — set Business Development +
+  Lead type on the associated Lead.
+- `crm.schemas.contacts.read` (+ leads schema read) — confirm property names/enums.
+
+REST calls per approved lead (base `https://api.hubapi.com`, bearer token):
+1. **Discover Lead-object property names once** (then hard-code in the mapping):
+   `GET /crm/v3/properties/leads` → find the internal names for "Business
+   Development" (enum, value `Yes`) and "Lead type" (enum, value `New Business`).
+2. **Set contact lifecycle stage:**
+   `PATCH /crm/v3/objects/contacts/{contactId}`
+   body `{"properties":{"lifecyclestage":"marketingqualifiedlead"}}`.
+3. **Find the associated Lead, then set its fields:**
+   `GET /crm/v4/objects/contacts/{contactId}/associations/leads` → take the Lead
+   id → `PATCH /crm/v3/objects/leads/{leadId}` body
+   `{"properties":{"<business_development>":"Yes","<lead_type>":"New Business"}}`.
+4. **Do NOT set owner** — the native by-country workflow fires on the stage change.
+
+Mirror the token handling in `apps-script/Code.gs` (script property, scoped read
+there; this app additionally needs write). Verify on **one** lead before batching.
+
 ## Enrichment (pluggable — this is the swappable LinkedIn replacement)
 
 Run providers in order until the rubric has enough signal; record which provider

@@ -59,18 +59,40 @@ HubSpot, 4 separate field updates per lead) with:
 | Country of residence | `country` |
 | Questionnaire signals | `your_goals_with_moonfare`, `d2i_estimated_financial_portfolio_size` |
 
-**CONFIRM AT RUNTIME** (internal names not yet verified — resolve before writing,
-mirroring how the funnel playbook confirms `suitability`/`investor_type`). Use
-`search_properties` / `get_properties` on `contacts` with these keywords:
+**BD score (prioritisation) — CONFIRMED:** use the native **`hubspotscore`**
+("HubSpot Score" — sales-readiness). Sort the queue by it, descending.
 
-| Concept | Search keyword | Fill in once confirmed |
-| --- | --- | --- |
-| BD threshold / lead score (prioritisation) | `bd`, `score`, `hubspotscore`, `threshold` | `__________` |
-| Business Development toggle → set "Yes" | `business_development` | `__________` |
-| Lead Type → set "New Business" | `lead_type` | `__________` (value for "New Business": `__________`) |
+**Qualify-action write targets — the fields span TWO objects:**
 
-> Do **not** guess these. If a name can't be confirmed, stop and report it in the
-> Slack post rather than writing to the wrong field.
+| Field to set | Object | Internal name | Writable via current HubSpot MCP? |
+| --- | --- | --- | --- |
+| Lead stage → MQL (`lifecyclestage = marketingqualifiedlead`) | **Contact** | `lifecyclestage` | ✅ yes |
+| Contact Owner (by country) | **Contact** | `hubspot_owner_id` | ✅ already a native HubSpot workflow — do NOT set here |
+| Business Development → `Yes` | **Lead** (HubSpot Leads object, `0-136`) | TBC | ❌ **no** — see constraint |
+| Lead type → `New Business` | **Lead** (HubSpot Leads object, `0-136`) | TBC | ❌ **no** — see constraint |
+
+> **CONSTRAINT (verified 2026-06-29).** `business_development`, `lead_type`,
+> `lead_label`, `is_target_account` do **not** exist on `contacts` (HubSpot
+> returned them as not-found). They live on the **Leads object**, and the
+> currently-connected HubSpot MCP **does not support the Leads object** (`leads`
+> and `0-136` both return "object type not supported" for read and write). So
+> Pass B can set the **contact** lifecycle stage today, but **cannot** set
+> Business Development / Lead type through this connector.
+>
+> **Resolution (pick one — see "Pass B write path" below):**
+> 1. **HubSpot workflow fan-out (recommended).** Claude sets `lifecyclestage =
+>    marketingqualifiedlead` (+ optionally one contact-level "BD qualified" flag);
+>    a native HubSpot workflow sets Business Development=Yes & Lead type=New
+>    Business on the associated Lead and assigns the owner — same pattern as the
+>    existing owner-by-country workflow. No token for Claude; one-time admin build.
+> 2. **Private-app token + REST.** Admin creates a HubSpot private app with
+>    `crm.objects.leads` read/write; Claude writes the Lead fields directly via
+>    REST (mirrors `apps-script/Code.gs`). Full control; Claude holds a token.
+> 3. **n8n owns the write-back.** n8n's HubSpot node updates the Lead object;
+>    Claude does enrich/score/approve only. Two platforms to maintain.
+>
+> Until one is chosen + set up, Pass B writes **only** the contact lifecycle stage
+> and reports the Lead-object fields as "pending write path" in the Slack thread.
 
 ## Enrichment (pluggable — this is the swappable LinkedIn replacement)
 
@@ -207,12 +229,14 @@ auto-qualifies only `MQL + high confidence + score ≥ 85` (see Config / Phase 2
 ### Pass B — Apply (execute approved decisions)
 
 7. **Read approvals** from the Slack thread/reactions. For each ✅ Qualify, perform
-   the qualify action as **one logical update** on the contact:
-   - `lifecyclestage` → `marketingqualifiedlead`
-   - `<business_development prop>` → `Yes`
-   - `<lead_type prop>` → `New Business`
+   the qualify action (one logical update), respecting the two-object split:
+   - **Contact (this MCP):** `lifecyclestage` → `marketingqualifiedlead`.
+   - **Lead object:** Business Development → `Yes`, Lead type → `New Business` —
+     via the chosen **Pass B write path** (HubSpot workflow fan-out / private-app
+     REST / n8n). Until a path is live, set the contact stage only and report
+     these two as "pending write path".
    - **Do NOT set Contact Owner** — the native HubSpot workflow assigns it by
-     `country` once the above fields change. (BPMN `Task_5` stays automated.)
+     `country` once the stage changes. (BPMN `Task_5` stays automated.)
    For each ❌ / deferred-as-Skip, record the skip reason (note or property) but do
    not change lifecycle.
 8. **Confirm** back in the Slack thread: per-lead ✅ applied / ❌ skipped / ⚠️

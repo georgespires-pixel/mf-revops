@@ -3,8 +3,9 @@
 > This file is the **prompt** a scheduled Claude Code (web) session runs every
 > Sunday at **20:00 Europe/Berlin (CET/CEST)**. It rebuilds the funnel/MQL
 > figures live from HubSpot and delivers a digest. It mirrors the methodology
-> documented in the source workbook **"Funnel and MQLs"**
-> (`docs.google.com/spreadsheets/d/1wkIIX66eDL5h24820dVgyZSIL8TWc-KuwGdH1bQWcQM`).
+> documented in the workbook **"Copy of Funnel and MQLs"**
+> (`docs.google.com/spreadsheets/d/1H8knKk8RnXTT22CC_tragza__IoRjkcxEEGmBxJbhXw`),
+> whose `Live …` tabs are refreshed weekly by `apps-script/Code.gs`.
 
 ## Goal
 
@@ -14,13 +15,13 @@ post it as a Slack digest. Replace the manual "HubSpot CRM export, pulled
 
 ## Delivery
 
-- **Format:** a Slack digest (headline + key tables). No Google Sheet is created
-  or updated for now (the available Google tools can't write into the existing
-  workbook in place; revisit via Apps Script later — see "Future" below).
+- **Format:** a Slack digest (headline + key tables). This routine itself does
+  not write to any Google Sheet — the workbook is refreshed separately by the
+  Apps Script lane (see below), which runs on its own trigger.
 - **Destination:** Slack channel (see `## Config` below).
-- **Do NOT link the source workbook in the post** — it is not auto-updated, so a
-  link would point leadership at stale data. (Re-add only once the Apps Script
-  is live and refreshing the workbook.)
+- **Do NOT link the workbook in the post.** The `Live …` tabs are now auto-
+  refreshed, but the digest is intentionally kept self-contained (Slack-only).
+  Add a link only if leadership asks for the drill-down.
 
 ### Spreadsheet refresh (optional, separate from this routine)
 To refresh the workbook weekly, use the Google Apps Script in
@@ -39,7 +40,7 @@ stays Slack-only.
 | Setting | Value |
 | --- | --- |
 | Slack channel | `#funnel-and-mql-weekly-update` (ID `C0BAQ5K1UEP`) |
-| Source workbook | `1wkIIX66eDL5h24820dVgyZSIL8TWc-KuwGdH1bQWcQM` |
+| Workbook (methodology + Live tabs) | `1H8knKk8RnXTT22CC_tragza__IoRjkcxEEGmBxJbhXw` (_Copy of Funnel and MQLs_) |
 | HubSpot timezone | `Europe/Berlin` (account default — confirmed) |
 | Lookback window | Current + previous 2 full months, plus current partial month/week |
 

@@ -22,11 +22,16 @@ post it as a Slack digest. Replace the manual "HubSpot CRM export, pulled
   link would point leadership at stale data. (Re-add only once the Apps Script
   is live and refreshing the workbook.)
 
-### In-place workbook refresh (optional, separate from this routine)
-To refresh the **original** workbook weekly, use the Google Apps Script in
-`apps-script/Code.gs` (bound to the sheet, weekly time trigger, calls HubSpot
-directly, writes `Live …` tabs). Setup: `apps-script/README.md`. This runs
-independently of the Claude routine, which stays Slack-only.
+### Spreadsheet refresh (optional, separate from this routine)
+To refresh the workbook weekly, use the Google Apps Script in
+`apps-script/Code.gs` (bound to _Copy of Funnel and MQLs_
+`1H8knKk8RnXTT22CC_tragza__IoRjkcxEEGmBxJbhXw`, weekly time trigger, calls
+HubSpot directly). It rebuilds all nine data tabs — Funnel by Market / Source /
+Market×Source / Key Paid+Owned, Weekly Trend, Lifecycle by Month, Why PQLs are
+stuck, MQL statistics, Methodology — as styled `Live …` tabs matching the
+workbook's colour scheme, and grows a new month/week column each period. Setup:
+`apps-script/README.md`. This runs independently of the Claude routine, which
+stays Slack-only.
 - **Subject / title:** `Weekly Funnel & MQL — w/c <Monday of the reporting week> (pulled <run date>)`
 
 ## Config (edit these)

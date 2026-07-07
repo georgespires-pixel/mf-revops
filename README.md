@@ -1,19 +1,18 @@
-# mf-revops — Weekly RevOps Automations
+# mf-revops — RevOps Automations
 
-This repo hosts the scheduled **RevOps weekly reporting routines**. Each is a
-self-contained playbook a scheduled Claude Code session runs against live tools
-(HubSpot / Jira) and delivers to Slack.
+Claude Code playbooks that automate Moonfare RevOps/BD workflows against live
+tools (HubSpot / Jira) and deliver to Slack. Each is a self-contained playbook a
+scheduled Claude Code session runs. Three automations live here today:
 
-| Routine | Source | Delivers to | Skill |
-|---|---|---|---|
-| **Funnel & MQL** | HubSpot | `#funnel-and-mql-weekly-update` | [`weekly-funnel-report.md`](./weekly-funnel-report.md) |
-| **HelpCenter (COHC) tickets** | Jira (COHC board) | `#team-rev-ops` | [`.claude/skills/revops-helpcenter-weekly/SKILL.md`](./.claude/skills/revops-helpcenter-weekly/SKILL.md) |
-
-See [HelpCenter setup](#helpcenter-revops-ticket-report) below for the second routine.
+| Automation | Source | Skill / Playbook | Delivery |
+| --- | --- | --- | --- |
+| Weekly Funnel & MQL report | HubSpot | [`weekly-funnel-report.md`](./weekly-funnel-report.md) (`/weekly-funnel-report`) | Slack digest, Sunday 20:00 CET |
+| HelpCenter (COHC) tickets | Jira (COHC board) | [`revops-helpcenter-weekly`](./.claude/skills/revops-helpcenter-weekly/SKILL.md) | `#team-rev-ops`, weekly |
+| BD CRM screening (Phase 1) | HubSpot | [`crm-screening.md`](./crm-screening.md) (`/crm-screening`) | Slack approval queue → HubSpot writes |
 
 ---
 
-## Funnel & MQL report
+## Weekly Funnel & MQL Automation
 
 Automates the **"Funnel and MQLs"** report so it lands every **Sunday evening**
 instead of being hand-built from a manual HubSpot export.
@@ -131,3 +130,34 @@ listed individually — each with week-over-week deltas.
 
 Validated against the live board (52 open tickets, single page) when the skill was
 added — the JQL query and all constants resolve correctly.
+
+---
+
+## BD CRM Screening Automation (Phase 1)
+
+Automates the daily **Business Development CRM screening** loop (~3 hrs/day, ~66
+hrs/month) that qualifies pre-qualified leads (PQLs) in HubSpot.
+
+- **What runs:** [`crm-screening.md`](./crm-screening.md) — the playbook a
+  scheduled Claude Code session executes (skill: `/crm-screening`).
+- **Phase 1 = human-approved copilot.** Per lead, Claude enriches (compliant
+  enrichment API or web search — **no LinkedIn scraping**), scores against a
+  written rubric, and posts a **Qualify/Skip proposal** to Slack. A human reacts
+  ✅/❌; Claude then applies approved decisions to HubSpot as **one** action
+  (`lifecyclestage → marketingqualifiedlead`, Business Development = Yes, Lead
+  Type = New Business). Contact Owner is left to the existing native HubSpot
+  workflow (assigned by country).
+- **Phase 2 (documented, OFF):** auto-qualify high-confidence leads once the
+  rubric is trusted.
+
+### Why Claude Code (not n8n)
+The hard part of this process is **judgement** (enrich → "good info to qualify?"),
+which only an LLM does; n8n would still need an LLM node and a second system to
+maintain. The deterministic HubSpot writes are a handful of field updates Claude
+does via the HubSpot MCP, and owner routing already runs as a native HubSpot
+workflow. Reuses the same infra as the funnel automation — no new platform.
+
+### Open items before first live run
+See the checklist at the bottom of `.claude/skills/crm-screening/SKILL.md`:
+confirm HubSpot property names (BD score, Business Development, Lead Type),
+confirm/create the Slack channel, and ratify the rubric with BD.

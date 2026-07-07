@@ -128,6 +128,16 @@ REST calls per approved lead (base `https://api.hubapi.com`, bearer token):
 Mirror the token handling in `apps-script/Code.gs` (script property, scoped read
 there; this app additionally needs write). Verify on **one** lead before batching.
 
+**Implemented in [`scripts/passb_hubspot.py`](scripts/passb_hubspot.py)** (stdlib
+REST client, token from env `HUBSPOT_BD_WRITE_TOKEN`). It carries the sandbox-setup
+steps (`whoami` to confirm the portal is a sandbox, `props leads` to discover the
+internal names/enums, `seed-test` to create a throwaway contact+lead) and the
+qualify action itself (`qualify --contact-id <ID>` dry-run; `--apply` writes and
+re-reads to verify). Confirmed Lead-object names live in `scripts/lead_props.json`
+(template `lead_props.json.example`). Setup + safety rails:
+[`scripts/README.md`](scripts/README.md). Writes refuse on non-sandbox portals and
+`qualify` is dry-run unless `--apply`.
+
 ## Enrichment (pluggable — this is the swappable LinkedIn replacement)
 
 Run providers in order until the rubric has enough signal; record which provider

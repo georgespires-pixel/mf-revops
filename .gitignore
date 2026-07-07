@@ -1,3 +1,15 @@
 # Generated report artifacts (delivered via chat/Slack, not version-controlled)
 *.xlsx
 *.csv
+
+# Never commit secrets. The HubSpot private-app token lives in the session env
+# (HUBSPOT_BD_WRITE_TOKEN), never on disk.
+*.env
+.env
+*token*
+*secret*
+!lead_props.json.example
+
+# Python bytecode
+__pycache__/
+*.pyc

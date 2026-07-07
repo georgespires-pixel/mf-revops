@@ -1,0 +1,11 @@
+{
+  "_comment": "Confirmed Lead-object property mapping for Pass B. Copy this file to lead_props.json and fill in the REAL internal names + enum values discovered in the sandbox via `python3 scripts/passb_hubspot.py props leads --grep business` and `--grep lead type`. Do NOT guess — the sandbox may not mirror prod's custom properties.",
+  "business_development": {
+    "name": "<internal_name_from_props_leads>",
+    "value": "Yes"
+  },
+  "lead_type": {
+    "name": "<internal_name_from_props_leads>",
+    "value": "New Business"
+  }
+}

@@ -41,11 +41,18 @@ decision logic — follow the playbook.
 ## Status / open items before first live run
 - [x] BD score for prioritisation = native `hubspotscore` (confirmed).
 - [x] Slack approval channel = `#test-claude` (confirmed, interim).
-- [ ] **Choose + set up a Pass B write path.** The connected HubSpot MCP is
-  **read-only** (no CRM update tool) and **cannot read/write the Leads object**
-  where Business Development + Lead type live. Pass B writes need a private-app
-  token + REST (recommended) or n8n. Until then Pass B writes nothing.
-- [ ] Confirm the Leads-object internal names for Business Development + Lead type
-  (and the "New Business" value) once a write path can reach that object.
+- [x] **Pass B write path chosen + implemented:** private-app token + REST in
+  [`scripts/passb_hubspot.py`](../../../scripts/passb_hubspot.py) (setup +
+  commands in [`scripts/README.md`](../../../scripts/README.md)). The connected
+  HubSpot MCP is read-only and cannot reach the Leads object, so all Pass B
+  writes go through this script with the env token `HUBSPOT_BD_WRITE_TOKEN`.
+- [ ] **Admin: create the sandbox + private-app token** (HubSpot UI action — no
+  API can do it). Scopes + click-path in `scripts/README.md`. Then export
+  `HUBSPOT_BD_WRITE_TOKEN` in the session.
+- [ ] **Confirm the Leads-object internal names** for Business Development + Lead
+  type (and the "New Business" value) in the sandbox: `passb_hubspot.py props
+  leads`, then fill `scripts/lead_props.json`. Sandbox may not mirror prod.
+- [ ] **Verify Pass B on ONE lead** in the sandbox (`qualify --contact-id <ID>
+  --apply`) before any batch or before pointing at prod.
 - [ ] Ratify the qualification rubric (weights + threshold) with Yijia/BD.
 - [ ] (Optional) Wire a compliant enrichment API (Apollo/PDL/Clearbit).

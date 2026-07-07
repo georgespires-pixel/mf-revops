@@ -25,8 +25,11 @@ This is a HubSpot **UI** action; no API/MCP can mint a private-app token.
    - `crm.objects.leads.read`
    - `crm.objects.leads.write`
    - `crm.schemas.contacts.read`
-   - `crm.schemas.custom.read` (or the leads-schema read scope) — to read Lead
-     property definitions
+
+   Note: `crm.objects.leads.read` is enough to read the Lead **property list**
+   (`GET /crm/v3/properties/leads`) — there is no separate "leads schema" scope
+   in the picker. Only if that call returns **403** do you need to also add
+   `crm.schemas.custom.read`.
 4. **Create**, then **copy the access token**.
 5. **Store it as an env var in the screening session** (never commit it):
    ```bash

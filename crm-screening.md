@@ -110,7 +110,10 @@ Create), then store the token as `HUBSPOT_BD_WRITE_TOKEN` in the session env
 - `crm.objects.contacts.read`, `crm.objects.contacts.write` — set `lifecyclestage`.
 - `crm.objects.leads.read`, `crm.objects.leads.write` — set Business Development +
   Lead type on the associated Lead.
-- `crm.schemas.contacts.read` (+ leads schema read) — confirm property names/enums.
+- `crm.schemas.contacts.read` — confirm the contact lifecycle enum. (The Lead
+  property list is readable with `crm.objects.leads.read`; there is no separate
+  "leads schema" scope. Only add `crm.schemas.custom.read` if `GET
+  /crm/v3/properties/leads` returns 403.)
 
 REST calls per approved lead (base `https://api.hubapi.com`, bearer token):
 1. **Discover Lead-object property names once** (then hard-code in the mapping):

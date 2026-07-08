@@ -4,7 +4,7 @@
  * Pulls the registration cohort from HubSpot and rebuilds the funnel/MQL data
  * tabs in THIS workbook on a weekly schedule. Runs independently of Claude.
  *
- * Target workbook: "Copy of Funnel and MQLs"
+ * Target workbook: "Automated Funnel and MQLs report"
  *   1H8knKk8RnXTT22CC_tragza__IoRjkcxEEGmBxJbhXw
  *
  * Cohort (verified): contacts where registration_date is in the rolling window

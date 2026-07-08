@@ -3,7 +3,7 @@
 `Code.gs` pulls the registration cohort from HubSpot and rebuilds the funnel /
 MQL data tabs in the workbook **on a weekly schedule, independent of Claude**.
 
-**Target workbook:** _Copy of Funnel and MQLs_
+**Target workbook:** _Automated Funnel and MQLs report_
 `1H8knKk8RnXTT22CC_tragza__IoRjkcxEEGmBxJbhXw`
 
 It writes to tabs prefixed **`Live `** so it never overwrites the curated
@@ -62,7 +62,7 @@ The last two power the new analysis tabs: `completed_suitability_questionnaire_d
    - Scope: **`crm.objects.contacts.read`**. Copy the access token.
 
 2. **Add the script to the workbook**
-   - Open _Copy of Funnel and MQLs_ → **Extensions → Apps Script**.
+   - Open _Automated Funnel and MQLs report_ → **Extensions → Apps Script**.
    - Paste the contents of `Code.gs` into the editor and save.
    - **Project Settings → Time zone:** set to **Europe/Berlin**.
 

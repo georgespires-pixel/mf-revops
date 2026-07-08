@@ -18,7 +18,7 @@ See [HelpCenter setup](#helpcenter-revops-ticket-report) below for the second ro
 Automates the **"Funnel and MQLs"** report so it lands every **Sunday evening**
 instead of being hand-built from a manual HubSpot export.
 
-- **Workbook:** [Copy of Funnel and MQLs](https://docs.google.com/spreadsheets/d/1H8knKk8RnXTT22CC_tragza__IoRjkcxEEGmBxJbhXw/edit) — its `Live …` tabs are refreshed weekly by [`apps-script/Code.gs`](./apps-script/Code.gs).
+- **Workbook:** [Automated Funnel and MQLs report](https://docs.google.com/spreadsheets/d/1H8knKk8RnXTT22CC_tragza__IoRjkcxEEGmBxJbhXw/edit) — its `Live …` tabs are refreshed weekly by [`apps-script/Code.gs`](./apps-script/Code.gs), and the Slack digest links to it.
 - **What runs:** [`weekly-funnel-report.md`](./weekly-funnel-report.md) — the playbook a
   scheduled Claude Code session executes against HubSpot.
 - **Delivery:** Slack digest to `#funnel-and-mql-weekly-update` (Slack-only; the sheet lane runs separately).

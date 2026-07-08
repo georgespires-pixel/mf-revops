@@ -3,7 +3,7 @@
 > This file is the **prompt** a scheduled Claude Code (web) session runs every
 > Sunday at **20:00 Europe/Berlin (CET/CEST)**. It rebuilds the funnel/MQL
 > figures live from HubSpot and delivers a digest. It mirrors the methodology
-> documented in the workbook **"Copy of Funnel and MQLs"**
+> documented in the workbook **"Automated Funnel and MQLs report"**
 > (`docs.google.com/spreadsheets/d/1H8knKk8RnXTT22CC_tragza__IoRjkcxEEGmBxJbhXw`),
 > whose `Live …` tabs are refreshed weekly by `apps-script/Code.gs`.
 
@@ -19,13 +19,15 @@ post it as a Slack digest. Replace the manual "HubSpot CRM export, pulled
   not write to any Google Sheet — the workbook is refreshed separately by the
   Apps Script lane (see below), which runs on its own trigger.
 - **Destination:** Slack channel (see `## Config` below).
-- **Do NOT link the workbook in the post.** The `Live …` tabs are now auto-
-  refreshed, but the digest is intentionally kept self-contained (Slack-only).
-  Add a link only if leadership asks for the drill-down.
+- **DO link the workbook in the post** so leaders can open the full drill-down.
+  Link the **_Automated Funnel and MQLs report_** sheet (see `## Config` for the
+  URL). This is safe now that the `Live …` tabs are auto-refreshed weekly by the
+  Apps Script lane (before, the sheet was stale so we withheld the link). Point
+  readers at the `Live …` tabs, which carry the current figures.
 
 ### Spreadsheet refresh (optional, separate from this routine)
 To refresh the workbook weekly, use the Google Apps Script in
-`apps-script/Code.gs` (bound to _Copy of Funnel and MQLs_
+`apps-script/Code.gs` (bound to _Automated Funnel and MQLs report_
 `1H8knKk8RnXTT22CC_tragza__IoRjkcxEEGmBxJbhXw`, weekly time trigger, calls
 HubSpot directly). It rebuilds all nine data tabs — Funnel by Market / Source /
 Market×Source / Key Paid+Owned, Weekly Trend, Lifecycle by Month, Why PQLs are
@@ -40,7 +42,7 @@ stays Slack-only.
 | Setting | Value |
 | --- | --- |
 | Slack channel | `#funnel-and-mql-weekly-update` (ID `C0BAQ5K1UEP`) |
-| Workbook (methodology + Live tabs) | `1H8knKk8RnXTT22CC_tragza__IoRjkcxEEGmBxJbhXw` (_Copy of Funnel and MQLs_) |
+| Workbook (Live tabs) | _Automated Funnel and MQLs report_ — `https://docs.google.com/spreadsheets/d/1H8knKk8RnXTT22CC_tragza__IoRjkcxEEGmBxJbhXw/edit` |
 | HubSpot timezone | `Europe/Berlin` (account default — confirmed) |
 | Lookback window | Current + previous 2 full months, plus current partial month/week |
 
@@ -141,8 +143,10 @@ Unresponsive are off-path and excluded; do **not** back-fill prior stages for th
    (e.g. previous digest). Flag any week-over-week swing that looks like a data
    issue rather than a real movement.
 6. **Build the digest** (see format below).
-7. **Deliver** by posting the digest to the configured Slack channel. Do not link
-   the source workbook and do not create or update any Google Sheet.
+7. **Deliver** by posting the digest to the configured Slack channel. Include the
+   link to the _Automated Funnel and MQLs report_ workbook (see `## Config`) so
+   leaders can open the full drill-down. Do not create or update any Google Sheet
+   from this routine (the Apps Script lane owns the refresh).
 8. **Do not** publish anything outside the configured Slack channel.
 
 ## Digest format
@@ -168,8 +172,10 @@ UK     ...
 
 WEEKLY TREND (Reg / RVF / MQL cumulative reached)
 w/c <date> ...   (trailing ~8 weeks; mark partial weeks *)
+
+Full report (auto-refreshed): <Automated Funnel and MQLs report link>
 ```
-(No workbook link — the source sheet is not auto-updated.)
+Post the workbook link as a Slack link — e.g. `<https://docs.google.com/spreadsheets/d/1H8knKk8RnXTT22CC_tragza__IoRjkcxEEGmBxJbhXw/edit|Automated Funnel and MQLs report>` — pointing leaders at the `Live …` tabs, which hold the current figures.
 
 ## Notes / caveats to carry into the digest
 - RVF and MQL are defined independently — not a strictly nested cascade.

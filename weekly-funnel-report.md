@@ -149,7 +149,10 @@ Unresponsive are off-path and excluded; do **not** back-fill prior stages for th
 Weekly Funnel & MQL — w/c <Mon DD> (pulled <DD Mon YYYY>)
 
 HEADLINE
-<2–4 sentences: biggest WoW / MoM movements, partial-period caveat, one action.>
+• <biggest WoW / MoM movement>
+• <second notable movement or market/source callout>
+• <partial-period caveat>
+• Action: <one recommended action>
 
 FUNNEL (last 2 full months + partial)
 Stage           <M1>   <M2>   <M3*>   Δ M-A

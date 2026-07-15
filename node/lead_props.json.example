@@ -1,0 +1,5 @@
+{
+  "_comment": "Copy to lead_props.json and fill in the REAL internal names + enum values discovered in the sandbox via `node crm-screening.mjs props leads --grep business` and `--grep \"lead type\"`. Do NOT guess — the sandbox may not mirror prod's custom properties.",
+  "business_development": { "name": "<internal_name>", "value": "Yes" },
+  "lead_type": { "name": "<internal_name>", "value": "New Business" }
+}

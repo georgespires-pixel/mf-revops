@@ -71,6 +71,17 @@ python3 scripts/passb_hubspot.py qualify --contact-id <ID> --apply
 4. **Owner is NOT set** — the native HubSpot by-country workflow assigns it once
    the lifecycle stage changes.
 
+## Network egress (IMPORTANT for web sessions)
+
+Direct calls to `api.hubapi.com` need outbound network access. In a Claude Code
+**web** session the environment's network policy must list `api.hubapi.com` in
+its **allowed domains** (environment settings → Network access), or every REST
+call returns `403 CONNECT … policy denial` — verified 2026-07-15. The HubSpot
+**MCP** connector is unaffected (routed server-side), which is why the funnel
+report works without this. Add `api.hubapi.com` to the allowlist before running
+`whoami`/`props`/`qualify` from a web session; a local terminal has no such
+restriction.
+
 ## Safety rails
 
 - **No token → clear error.** Nothing runs without `HUBSPOT_BD_WRITE_TOKEN`.

@@ -6,24 +6,27 @@ HubSpot and no API keys needed to demo it.
 
 This note is for whoever runs it. Full details are in `README.md`.
 
-## 0. Prerequisite: Python 3.10+
+## 0. Prerequisite: Python 3.9+
 
 The error "command not found: python" just means Python isn't installed (or isn't
 on PATH). Install it:
 
-- **macOS:** `brew install python` (or download from https://python.org/downloads)
+- **macOS:** `brew install python@3.12` (or download from https://python.org/downloads).
+  Note: macOS also ships a system `python3` (3.9) — that works too (the project
+  supports 3.9), but a newer Python is recommended.
 - **Windows:** install from https://python.org/downloads and tick
   "Add python.exe to PATH" during setup
 - **Linux:** `sudo apt install python3 python3-venv python3-pip`
 
-Verify (one of these will work):
+Verify (on macOS the command is almost always `python3`, not `python`):
 
 ```bash
-python --version      # or:
 python3 --version
 ```
 
-Use whichever name works (`python` or `python3`) in the commands below.
+Use whichever name works (`python3` or `python`) in the commands below.
+Python **3.10+ recommended**; **3.9 is supported** (an extra dependency,
+`eval_type_backport`, installs automatically from `requirements.txt` on 3.9).
 
 ## 1. Install
 

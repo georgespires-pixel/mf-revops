@@ -8,7 +8,7 @@ since they go stale). Read-only against HubSpot throughout.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import anthropic
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
@@ -98,10 +98,14 @@ def create_app(config: Config | None = None) -> FastAPI:
 
     @app.get("/api/contacts")
     def contacts(
-        fund: str | None = Query(None),
-        industry: str | None = Query(None),
-        sentiment: str | None = Query(None),
-        rep: str | None = Query(None, description="contact owner id"),
+        # Use typing.Optional (not `str | None`) here: FastAPI evaluates route
+        # parameter annotations at runtime, and the `|` union syntax only
+        # evaluates on Python 3.10+. This keeps the app runnable on 3.9 (macOS
+        # system Python) without extra packages.
+        fund: Optional[str] = Query(None),
+        industry: Optional[str] = Query(None),
+        sentiment: Optional[str] = Query(None),
+        rep: Optional[str] = Query(None, description="contact owner id"),
     ) -> list[dict[str, Any]]:
         rows = store.query_contacts(
             fund=fund, industry=industry, sentiment=sentiment, owner_id=rep

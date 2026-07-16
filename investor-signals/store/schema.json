@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://moonfare.internal/investor-signals/signal.schema.json",
+  "title": "InvestorInterestSignal",
+  "description": "One structured investor-interest signal extracted from a single HubSpot engagement (call summary, email, meeting, note). Read-only derivation from HubSpot; no CRM writes. One record per engagement, keyed by signal_id.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "signal_id",
+    "engagement_id",
+    "engagement_type",
+    "timestamp",
+    "interest_level",
+    "sentiment",
+    "asset_classes",
+    "funds",
+    "summary",
+    "extracted_at"
+  ],
+  "properties": {
+    "signal_id": {
+      "type": "string",
+      "description": "Stable dedup key: 'sig_' + engagement_type + '_' + engagement_id.",
+      "pattern": "^sig_[a-z]+_[0-9]+$"
+    },
+    "engagement_id": { "type": "string", "description": "HubSpot engagement hs_object_id." },
+    "engagement_type": { "type": "string", "enum": ["call", "email", "meeting", "note", "task"] },
+    "engagement_title": { "type": ["string", "null"] },
+    "timestamp": { "type": "string", "format": "date-time", "description": "Engagement activity time (hs_timestamp), ISO-8601." },
+    "direction": { "type": ["string", "null"], "enum": ["INBOUND", "OUTBOUND", null] },
+    "hubspot_url": { "type": ["string", "null"], "description": "Deep link to the engagement in HubSpot for click-through." },
+    "contact": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Best-effort contact context. IDs/emails require an association lookup; may be null when only the transcript name is known.",
+      "properties": {
+        "id": { "type": ["string", "null"] },
+        "name": { "type": ["string", "null"] },
+        "email": { "type": ["string", "null"] }
+      }
+    },
+    "company": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": ["string", "null"] },
+        "name": { "type": ["string", "null"] }
+      }
+    },
+    "owner": { "type": ["string", "null"], "description": "Moonfare rep / relationship manager on the engagement (name or owner id)." },
+    "interest_level": {
+      "type": "string",
+      "enum": ["hot", "warm", "cold", "existing_investor", "not_investor"]
+    },
+    "sentiment": { "type": "string", "enum": ["positive", "neutral", "negative", "mixed"] },
+    "sentiment_score": {
+      "type": ["number", "null"],
+      "minimum": -1,
+      "maximum": 1,
+      "description": "Optional numeric sentiment, -1 (very negative) to +1 (very positive)."
+    },
+    "urgency": { "type": "string", "enum": ["high", "medium", "low", "none"] },
+    "asset_classes": {
+      "type": "array",
+      "description": "Asset classes / strategies the investor showed interest in. Controlled vocab (taxonomy.json).",
+      "items": { "type": "string" }
+    },
+    "industries": {
+      "type": "array",
+      "description": "Sector interests mentioned (e.g. Technology, Healthcare, AI, Energy). Free-text but kept short.",
+      "items": { "type": "string" }
+    },
+    "funds": {
+      "type": "array",
+      "description": "Funds discussed, normalized against funds.json.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["raw", "canonical", "fund_id", "match"],
+        "properties": {
+          "raw": { "type": "string", "description": "As it appeared in the source (pre-normalization)." },
+          "canonical": { "type": ["string", "null"], "description": "Canonical fund name, or null if unmatched." },
+          "fund_id": { "type": ["string", "null"] },
+          "asset_class": { "type": ["string", "null"] },
+          "match": { "type": "string", "enum": ["exact", "alias", "fuzzy", "unmatched"] },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "competitors_mentioned": {
+      "type": "array",
+      "description": "Rival platforms/managers the investor is comparing against (from funds.json competitors).",
+      "items": { "type": "string" }
+    },
+    "ticket_size": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Investor's own stated/implied ticket. Null when none was expressed (e.g. only platform minimums were discussed).",
+      "properties": {
+        "raw": { "type": ["string", "null"] },
+        "amount_eur": { "type": ["number", "null"], "description": "Point estimate normalized to EUR, or null for a range/unknown." },
+        "min": { "type": ["number", "null"] },
+        "max": { "type": ["number", "null"] },
+        "currency": { "type": ["string", "null"], "enum": ["EUR", "USD", "GBP", "CHF", null] },
+        "basis": { "type": ["string", "null"], "enum": ["stated", "range", "threshold_discussed", "inferred", null] },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+      }
+    },
+    "pain_points": { "type": "array", "items": { "type": "string" } },
+    "objections": { "type": "array", "items": { "type": "string" } },
+    "next_step": { "type": ["string", "null"], "description": "Agreed follow-up / next action, if any." },
+    "next_step_date": { "type": ["string", "null"], "description": "Deadline or scheduled follow-up date if mentioned (ISO date)." },
+    "quotes": {
+      "type": "array",
+      "description": "Short supporting evidence paraphrased/quoted from the source.",
+      "items": { "type": "string" }
+    },
+    "summary": { "type": "string", "description": "One-to-two sentence extraction summary of the investor signal." },
+    "source_excerpt": { "type": ["string", "null"], "description": "Trimmed plain-text of the source for traceability." },
+    "extraction_confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "extracted_at": { "type": "string", "format": "date-time" },
+    "extractor_version": { "type": ["string", "null"] }
+  }
+}

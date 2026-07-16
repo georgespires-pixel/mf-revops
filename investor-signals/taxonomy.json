@@ -1,0 +1,47 @@
+{
+  "_comment": "Controlled vocabularies for the investor-signal extraction. The extraction skill MUST pick values from these enums so the store stays queryable. Add new values here (not ad-hoc in records) when a genuinely new category appears.",
+  "asset_classes": [
+    "Buyout",
+    "Growth Equity",
+    "Venture Capital",
+    "Secondaries",
+    "Private Credit",
+    "Infrastructure",
+    "Real Estate",
+    "GP Stakes",
+    "Co-Investment",
+    "Direct Deal",
+    "Multi-Strategy / Evergreen",
+    "Unspecified"
+  ],
+  "sentiment": ["positive", "neutral", "negative", "mixed"],
+  "interest_level": {
+    "hot": "Explicit intent to invest and/or a concrete ticket, near-term timeline, or asked for next steps to commit.",
+    "warm": "Genuine interest, engaged in substance, but still evaluating / no firm commitment.",
+    "cold": "Little or no interest; disengaged, unqualified, or explicitly declined.",
+    "existing_investor": "Already an investor; call is servicing, reporting, redemption or top-up rather than net-new interest.",
+    "not_investor": "Not an investor-interest conversation at all (recruitment, vendor, internal, device/logistics test). Excluded from the fund-interest view."
+  },
+  "urgency": {
+    "high": "Decision or action expected within ~4 weeks, or an explicit deadline / capital-call / closing window mentioned.",
+    "medium": "Active but multi-week/month horizon; follow-up scheduled.",
+    "low": "Exploratory, no timeline.",
+    "none": "No urgency signal present."
+  },
+  "common_pain_points": [
+    "long commitment duration / illiquidity",
+    "high or unclear fees",
+    "minimum ticket too high",
+    "capital-call timing / cash-flow profile",
+    "high entry valuations",
+    "risk / loss concerns",
+    "tax / reporting complexity (K-1, PFIC)",
+    "eligibility / professional-investor classification",
+    "geographic / residency restrictions",
+    "currency / FX reporting",
+    "transparency / track-record questions",
+    "onboarding / verification friction"
+  ],
+  "currencies": ["EUR", "USD", "GBP", "CHF"],
+  "engagement_types": ["call", "email", "meeting", "note", "task"]
+}

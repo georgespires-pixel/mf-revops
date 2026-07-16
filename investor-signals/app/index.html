@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Moonfare · Investor Signals</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f0f2f5;
+    --border: #e3e6ea;
+    --ink: #1a1d23;
+    --ink-soft: #5b6472;
+    --ink-faint: #8a93a2;
+    --accent: #4f46e5;
+    --accent-soft: #eef0fe;
+    --hot: #e11d48;
+    --warm: #f59e0b;
+    --cold: #64748b;
+    --existing: #0ea5e9;
+    --pos: #16a34a;
+    --neg: #dc2626;
+    --neu: #64748b;
+    --mixed: #a855f7;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10);
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1116; --panel: #161a21; --panel-2: #1d222b; --border: #2a303a;
+      --ink: #e8ebf0; --ink-soft: #a6b0bf; --ink-faint: #6c7686;
+      --accent: #8b83ff; --accent-soft: #23233a;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 8px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1116; --panel: #161a21; --panel-2: #1d222b; --border: #2a303a;
+    --ink: #e8ebf0; --ink-soft: #a6b0bf; --ink-faint: #6c7686;
+    --accent: #8b83ff; --accent-soft: #23233a;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 8px rgba(0,0,0,.35);
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f7f9; --panel: #ffffff; --panel-2: #f0f2f5; --border: #e3e6ea;
+    --ink: #1a1d23; --ink-soft: #5b6472; --ink-faint: #8a93a2;
+    --accent: #4f46e5; --accent-soft: #eef0fe;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 20px 80px; }
+  header.top {
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    padding-bottom: 14px; border-bottom: 1px solid var(--border); margin-bottom: 18px;
+  }
+  header.top h1 { font-size: 20px; margin: 0; letter-spacing: -.2px; }
+  header.top .dot { color: var(--ink-faint); }
+  header.top .meta { color: var(--ink-faint); font-size: 12.5px; }
+  header.top .spacer { flex: 1; }
+  button.ghost {
+    background: var(--panel); color: var(--ink-soft); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 12.5px;
+  }
+  button.ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* KPI tiles */
+  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 18px; }
+  @media (max-width: 900px) { .kpis { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 520px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+  .kpi { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px 14px; box-shadow: var(--shadow); }
+  .kpi .n { font-size: 24px; font-weight: 650; letter-spacing: -.5px; }
+  .kpi .l { font-size: 11.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
+  .kpi.hot .n { color: var(--hot); } .kpi.warm .n { color: var(--warm); }
+  .kpi.existing .n { color: var(--existing); } .kpi.flag .n { color: var(--neg); }
+
+  .layout { display: grid; grid-template-columns: 300px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); }
+  .panel .hd { padding: 12px 14px; border-bottom: 1px solid var(--border); font-weight: 600;
+    font-size: 12.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-soft);
+    display: flex; align-items: center; gap: 8px; }
+  .panel .bd { padding: 12px 14px; }
+
+  /* sidebar filters */
+  .side { position: sticky; top: 14px; display: flex; flex-direction: column; gap: 14px; }
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { display: block; font-size: 11.5px; color: var(--ink-faint); text-transform: uppercase;
+    letter-spacing: .4px; margin-bottom: 5px; }
+  input[type="search"], select {
+    width: 100%; background: var(--panel-2); color: var(--ink); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 9px; font-size: 13px;
+  }
+  input[type="search"]:focus, select:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    border: 1px solid var(--border); background: var(--panel-2); color: var(--ink-soft);
+    border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer; user-select: none;
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .toggle-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-soft); }
+  .fund-list { display: flex; flex-direction: column; gap: 2px; max-height: 260px; overflow: auto; }
+  .fund-row { display: flex; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 7px;
+    cursor: pointer; font-size: 13px; }
+  .fund-row:hover { background: var(--panel-2); }
+  .fund-row[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .fund-row .cnt { color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+  .fund-row[aria-pressed="true"] .cnt { color: var(--accent); }
+
+  /* results */
+  .results-hd { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .results-hd .count { font-weight: 600; }
+  .results-hd .spacer { flex: 1; }
+  .results-hd select { width: auto; }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 12px; }
+  .card .row1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .card .who { font-weight: 650; font-size: 15px; }
+  .card .rep { color: var(--ink-faint); font-size: 12.5px; }
+  .card .when { color: var(--ink-faint); font-size: 12.5px; }
+  .card .spacer { flex: 1; }
+  .card .summary { margin: 8px 0 10px; color: var(--ink); }
+  .card .meta-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .card .kv { font-size: 12.5px; color: var(--ink-soft); }
+  .card .kv b { color: var(--ink); font-weight: 600; }
+  .card details { margin-top: 6px; }
+  .card details summary { cursor: pointer; color: var(--ink-soft); font-size: 12.5px; }
+  .card ul.q { margin: 6px 0 0; padding-left: 18px; color: var(--ink-soft); font-size: 12.5px; }
+  .card ul.q li { margin: 2px 0; }
+
+  .badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 2px 9px;
+    font-size: 11.5px; font-weight: 600; border: 1px solid transparent; white-space: nowrap; }
+  .b-hot { background: color-mix(in srgb, var(--hot) 14%, transparent); color: var(--hot); }
+  .b-warm { background: color-mix(in srgb, var(--warm) 16%, transparent); color: var(--warm); }
+  .b-cold { background: color-mix(in srgb, var(--cold) 16%, transparent); color: var(--cold); }
+  .b-existing_investor { background: color-mix(in srgb, var(--existing) 14%, transparent); color: var(--existing); }
+  .b-not_investor { background: var(--panel-2); color: var(--ink-faint); }
+  .tag { display: inline-block; background: var(--panel-2); border: 1px solid var(--border); color: var(--ink-soft);
+    border-radius: 6px; padding: 1px 7px; font-size: 11.5px; margin: 0 4px 4px 0; }
+  .tag.ac { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); color: var(--accent); }
+  .tag.fund { border-color: color-mix(in srgb, var(--pos) 45%, var(--border)); color: var(--pos); font-weight: 600; }
+  .tag.fund.unmatched { border-color: color-mix(in srgb, var(--warm) 55%, var(--border)); color: var(--warm); }
+  .tag.pain { border-color: color-mix(in srgb, var(--neg) 35%, var(--border)); color: var(--neg); }
+  .tag.comp { border-color: color-mix(in srgb, var(--mixed) 45%, var(--border)); color: var(--mixed); }
+  .sent { font-size: 11.5px; font-weight: 600; }
+  .sent.positive { color: var(--pos); } .sent.negative { color: var(--neg); }
+  .sent.neutral { color: var(--neu); } .sent.mixed { color: var(--mixed); }
+  .urg { font-size: 11.5px; }
+  .urg.high { color: var(--hot); font-weight: 600; } .urg.medium { color: var(--warm); } .urg.low { color: var(--ink-faint); }
+  .empty { text-align: center; color: var(--ink-faint); padding: 40px 0; }
+  .loader { display: none; }
+  .fund-title { font-size: 12px; color: var(--ink-faint); }
+  .filenote { font-size: 12px; color: var(--ink-faint); margin-top: 10px; }
+  code.k { background: var(--panel-2); border: 1px solid var(--border); border-radius: 5px; padding: 0 5px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Investor Signals</h1>
+    <span class="dot">·</span>
+    <span class="meta" id="genmeta">loading…</span>
+    <span class="spacer"></span>
+    <button class="ghost" id="loadBtn" title="Load a signals.json/.jsonl file">Load file…</button>
+    <input type="file" id="fileInput" accept=".json,.jsonl,application/json" style="display:none" />
+    <button class="ghost" id="themeBtn" title="Toggle theme">◐ Theme</button>
+  </header>
+
+  <div id="app">
+    <section class="kpis" id="kpis"></section>
+    <div class="layout">
+      <aside>
+        <div class="panel side-panel">
+          <div class="hd">Filters</div>
+          <div class="bd side">
+            <div class="field">
+              <label for="q">Search</label>
+              <input type="search" id="q" placeholder="contact, summary, quote…" />
+            </div>
+            <div class="field">
+              <label>Interest level</label>
+              <div class="chips" id="levelChips"></div>
+            </div>
+            <div class="field">
+              <label>Asset class</label>
+              <div class="chips" id="acChips"></div>
+            </div>
+            <div class="field">
+              <label>Sentiment</label>
+              <div class="chips" id="sentChips"></div>
+            </div>
+            <div class="field">
+              <label>Urgency</label>
+              <div class="chips" id="urgChips"></div>
+            </div>
+            <div class="field">
+              <label for="minTicket">Min ticket (EUR)</label>
+              <select id="minTicket">
+                <option value="0">Any</option>
+                <option value="100000">≥ €100k</option>
+                <option value="250000">≥ €250k</option>
+                <option value="500000">≥ €500k</option>
+                <option value="1000000">≥ €1M</option>
+              </select>
+            </div>
+            <div class="field toggle-row">
+              <input type="checkbox" id="inclNon" />
+              <label for="inclNon" style="text-transform:none;margin:0;letter-spacing:0;color:var(--ink-soft)">
+                Include non-investor calls
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:14px">
+          <div class="hd">Fund interest <span class="spacer"></span></div>
+          <div class="bd">
+            <div class="fund-title">Ranked by interested investors · click to filter</div>
+            <div class="fund-list" id="fundList" style="margin-top:8px"></div>
+          </div>
+        </div>
+      </aside>
+
+      <main>
+        <div class="results-hd">
+          <span class="count" id="resultCount">0 signals</span>
+          <span class="spacer"></span>
+          <label style="color:var(--ink-faint);font-size:12px">Sort</label>
+          <select id="sortBy">
+            <option value="date">Most recent</option>
+            <option value="urgency">Urgency</option>
+            <option value="ticket">Ticket size</option>
+            <option value="interest">Interest level</option>
+          </select>
+        </div>
+        <div id="results"></div>
+      </main>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ---- theme ----
+  var themeBtn = document.getElementById("themeBtn");
+  themeBtn.addEventListener("click", function () {
+    var cur = document.documentElement.getAttribute("data-theme");
+    var next = cur === "dark" ? "light" : cur === "light" ? "dark"
+      : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "dark");
+    document.documentElement.setAttribute("data-theme", next);
+  });
+
+  var STORE = window.__STORE__ || null;
+
+  // ---- file loader fallback ----
+  var fileInput = document.getElementById("fileInput");
+  document.getElementById("loadBtn").addEventListener("click", function () { fileInput.click(); });
+  fileInput.addEventListener("change", function (e) {
+    var f = e.target.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function () {
+      try {
+        var text = String(r.result).trim();
+        var signals;
+        if (text[0] === "[") { signals = JSON.parse(text); }
+        else if (text.indexOf("window.__STORE__") === 0) {
+          // a data.js file
+          /* eslint-disable no-eval */
+          var m = text.replace(/^window\.__STORE__\s*=\s*/, "").replace(/;\s*$/, "");
+          signals = JSON.parse(m).signals;
+        } else { // jsonl
+          signals = text.split(/\r?\n/).filter(Boolean).map(JSON.parse);
+        }
+        STORE = STORE || {};
+        STORE.signals = signals;
+        STORE.generated_at = "loaded from file: " + f.name;
+        boot();
+      } catch (err) { alert("Could not parse file: " + err.message); }
+    };
+    r.readAsText(f);
+  });
+
+  // ---- state ----
+  var state = {
+    q: "", levels: new Set(), acs: new Set(), sents: new Set(), urgs: new Set(),
+    fund: null, minTicket: 0, inclNon: false, sortBy: "date"
+  };
+
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+  function ticketValue(s) {
+    var t = s.ticket_size; if (!t) return 0;
+    if (typeof t.amount_eur === "number") return t.amount_eur;
+    // treat non-EUR roughly at parity for sort/threshold purposes
+    var v = t.min || t.max || 0;
+    return v || 0;
+  }
+  function ticketLabel(s) {
+    var t = s.ticket_size; if (!t) return "—";
+    if (t.raw) return t.raw;
+    var cur = t.currency || "";
+    if (t.amount_eur) return "€" + fmtNum(t.amount_eur);
+    if (t.min && t.max) return cur + " " + fmtNum(t.min) + "–" + fmtNum(t.max);
+    if (t.min) return cur + " " + fmtNum(t.min) + "+";
+    return "—";
+  }
+  function fmtNum(n) {
+    if (n >= 1e6) return (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + "M";
+    if (n >= 1e3) return Math.round(n / 1e3) + "k";
+    return String(n);
+  }
+  function fmtDate(iso) {
+    try { var d = new Date(iso); return d.toISOString().slice(0, 10); } catch (e) { return iso; }
+  }
+  var URG_RANK = { high: 3, medium: 2, low: 1, none: 0 };
+  var LVL_RANK = { hot: 5, warm: 4, existing_investor: 3, cold: 2, not_investor: 1 };
+  var LVL_LABEL = { hot: "Hot", warm: "Warm", cold: "Cold", existing_investor: "Existing", not_investor: "Non-investor" };
+
+  function investorSignals() {
+    return (STORE.signals || []).filter(function (s) { return s.interest_level !== "not_investor"; });
+  }
+
+  // ---- filtering ----
+  function applyFilters() {
+    var base = STORE.signals || [];
+    return base.filter(function (s) {
+      if (!state.inclNon && s.interest_level === "not_investor") return false;
+      if (state.levels.size && !state.levels.has(s.interest_level)) return false;
+      if (state.sents.size && !state.sents.has(s.sentiment)) return false;
+      if (state.urgs.size && !state.urgs.has(s.urgency)) return false;
+      if (state.acs.size) {
+        var hit = (s.asset_classes || []).some(function (a) { return state.acs.has(a); });
+        if (!hit) return false;
+      }
+      if (state.fund) {
+        var f = (s.funds || []).some(function (x) { return x.fund_id === state.fund; });
+        if (!f) return false;
+      }
+      if (state.minTicket) { if (ticketValue(s) < state.minTicket) return false; }
+      if (state.q) {
+        var hay = JSON.stringify([s.contact, s.owner, s.summary, s.quotes, s.pain_points,
+          s.funds, s.engagement_title, s.next_step]).toLowerCase();
+        if (hay.indexOf(state.q.toLowerCase()) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  function sortSignals(arr) {
+    var by = state.sortBy;
+    return arr.slice().sort(function (a, b) {
+      if (by === "date") return (b.timestamp || "").localeCompare(a.timestamp || "");
+      if (by === "urgency") return (URG_RANK[b.urgency] || 0) - (URG_RANK[a.urgency] || 0)
+        || (b.timestamp || "").localeCompare(a.timestamp || "");
+      if (by === "ticket") return ticketValue(b) - ticketValue(a);
+      if (by === "interest") return (LVL_RANK[b.interest_level] || 0) - (LVL_RANK[a.interest_level] || 0)
+        || (b.timestamp || "").localeCompare(a.timestamp || "");
+      return 0;
+    });
+  }
+
+  // ---- rendering ----
+  function renderKpis() {
+    var inv = investorSignals();
+    var hot = inv.filter(function (s) { return s.interest_level === "hot"; }).length;
+    var warm = inv.filter(function (s) { return s.interest_level === "warm"; }).length;
+    var existing = inv.filter(function (s) { return s.interest_level === "existing_investor"; }).length;
+    var comp = new Set();
+    inv.forEach(function (s) { (s.competitors_mentioned || []).forEach(function (c) { comp.add(c); }); });
+    var unmatched = 0;
+    inv.forEach(function (s) { (s.funds || []).forEach(function (f) { if (f.match === "unmatched") unmatched++; }); });
+    var tiles = [
+      { l: "Investor signals", n: inv.length, cls: "" },
+      { l: "Hot", n: hot, cls: "hot" },
+      { l: "Warm", n: warm, cls: "warm" },
+      { l: "Existing investors", n: existing, cls: "existing" },
+      { l: "Competitor mentions", n: comp.size, cls: "flag" },
+      { l: "Unmatched funds", n: unmatched, cls: "flag" }
+    ];
+    document.getElementById("kpis").innerHTML = tiles.map(function (t) {
+      return '<div class="kpi ' + t.cls + '"><div class="n">' + t.n + '</div><div class="l">' + t.l + '</div></div>';
+    }).join("");
+  }
+
+  function renderFundList() {
+    var inv = investorSignals();
+    var counts = {};
+    var byId = {};
+    inv.forEach(function (s) {
+      (s.funds || []).forEach(function (f) {
+        if (!f.fund_id) return;
+        counts[f.fund_id] = (counts[f.fund_id] || 0) + 1;
+        byId[f.fund_id] = f.canonical + (f.asset_class ? " · " + f.asset_class : "");
+      });
+    });
+    var rows = Object.keys(counts).map(function (id) { return { id: id, n: counts[id], label: byId[id] }; })
+      .sort(function (a, b) { return b.n - a.n; });
+    var el = document.getElementById("fundList");
+    if (!rows.length) { el.innerHTML = '<div class="fund-title">No matched funds in view.</div>'; return; }
+    el.innerHTML = rows.map(function (r) {
+      var pressed = state.fund === r.id ? ' aria-pressed="true"' : "";
+      return '<div class="fund-row" role="button"' + pressed + ' data-fund="' + esc(r.id) + '">' +
+        '<span>' + esc(r.label) + '</span><span class="cnt">' + r.n + '</span></div>';
+    }).join("");
+    Array.prototype.forEach.call(el.querySelectorAll(".fund-row"), function (row) {
+      row.addEventListener("click", function () {
+        var id = row.getAttribute("data-fund");
+        state.fund = state.fund === id ? null : id;
+        render();
+      });
+    });
+  }
+
+  function fundTags(s) {
+    return (s.funds || []).map(function (f) {
+      if (f.match === "unmatched")
+        return '<span class="tag fund unmatched" title="No canonical match — needs review">⚠ ' + esc(f.raw) + '</span>';
+      var title = "matched " + f.match + " (" + Math.round((f.confidence || 0) * 100) + "%) from “" + f.raw + "”";
+      return '<span class="tag fund" title="' + esc(title) + '">' + esc(f.canonical) + '</span>';
+    }).join("");
+  }
+
+  function renderCard(s) {
+    var who = esc((s.contact && s.contact.name) || s.engagement_title || "Unknown");
+    var lvl = s.interest_level;
+    var parts = [];
+    parts.push('<div class="card">');
+    parts.push('<div class="row1">');
+    parts.push('<span class="who">' + who + '</span>');
+    if (s.owner) parts.push('<span class="rep">RM: ' + esc(s.owner) + '</span>');
+    parts.push('<span class="spacer"></span>');
+    parts.push('<span class="badge b-' + lvl + '">' + (LVL_LABEL[lvl] || lvl) + '</span>');
+    parts.push('<span class="sent ' + s.sentiment + '">' + s.sentiment + '</span>');
+    if (s.urgency && s.urgency !== "none") parts.push('<span class="urg ' + s.urgency + '">urgency: ' + s.urgency + '</span>');
+    parts.push('</div>');
+
+    parts.push('<div class="summary">' + esc(s.summary) + '</div>');
+
+    parts.push('<div class="meta-row">');
+    parts.push(fundTags(s));
+    (s.asset_classes || []).forEach(function (a) { parts.push('<span class="tag ac">' + esc(a) + '</span>'); });
+    (s.competitors_mentioned || []).forEach(function (c) { parts.push('<span class="tag comp">vs ' + esc(c) + '</span>'); });
+    parts.push('</div>');
+
+    parts.push('<div class="meta-row">');
+    parts.push('<span class="kv"><b>Ticket:</b> ' + esc(ticketLabel(s)) + '</span>');
+    parts.push('<span class="kv">·</span>');
+    parts.push('<span class="kv"><b>When:</b> ' + fmtDate(s.timestamp) + '</span>');
+    if (s.next_step) {
+      parts.push('<span class="kv">·</span>');
+      parts.push('<span class="kv"><b>Next:</b> ' + esc(s.next_step) + (s.next_step_date ? " (" + esc(s.next_step_date) + ")" : "") + '</span>');
+    }
+    if (s.hubspot_url) {
+      parts.push('<span class="kv">·</span>');
+      parts.push('<a href="' + esc(s.hubspot_url) + '" target="_blank" rel="noopener">Open in HubSpot ↗</a>');
+    }
+    parts.push('</div>');
+
+    if ((s.pain_points || []).length) {
+      parts.push('<div class="meta-row">');
+      (s.pain_points || []).forEach(function (p) { parts.push('<span class="tag pain">' + esc(p) + '</span>'); });
+      parts.push('</div>');
+    }
+
+    var quotes = (s.quotes || []);
+    if (quotes.length) {
+      parts.push('<details><summary>Evidence (' + quotes.length + ')</summary><ul class="q">');
+      quotes.forEach(function (q) { parts.push('<li>' + esc(q) + '</li>'); });
+      parts.push('</ul></details>');
+    }
+    parts.push('</div>');
+    return parts.join("");
+  }
+
+  function render() {
+    if (!STORE || !STORE.signals) return;
+    renderKpis();
+    renderFundList();
+    syncChipStates();
+    var rows = sortSignals(applyFilters());
+    document.getElementById("resultCount").textContent =
+      rows.length + " signal" + (rows.length === 1 ? "" : "s") +
+      (state.fund ? " · filtered by fund" : "");
+    var box = document.getElementById("results");
+    box.innerHTML = rows.length ? rows.map(renderCard).join("")
+      : '<div class="empty">No signals match the current filters.</div>';
+  }
+
+  // ---- chips ----
+  function buildChips(containerId, values, stateSet, labelFn) {
+    var el = document.getElementById(containerId);
+    el.innerHTML = values.map(function (v) {
+      return '<span class="chip" role="button" aria-pressed="false" data-v="' + esc(v) + '">' +
+        esc(labelFn ? labelFn(v) : v) + '</span>';
+    }).join("");
+    Array.prototype.forEach.call(el.querySelectorAll(".chip"), function (chip) {
+      chip.addEventListener("click", function () {
+        var v = chip.getAttribute("data-v");
+        if (stateSet.has(v)) stateSet.delete(v); else stateSet.add(v);
+        render();
+      });
+    });
+  }
+  function syncChipStates() {
+    function sync(id, set) {
+      Array.prototype.forEach.call(document.getElementById(id).querySelectorAll(".chip"), function (chip) {
+        chip.setAttribute("aria-pressed", set.has(chip.getAttribute("data-v")) ? "true" : "false");
+      });
+    }
+    sync("levelChips", state.levels); sync("acChips", state.acs);
+    sync("sentChips", state.sents); sync("urgChips", state.urgs);
+  }
+
+  // ---- boot ----
+  function boot() {
+    if (!STORE || !STORE.signals) {
+      document.getElementById("genmeta").textContent = "no data — click “Load file…” to open signals.json";
+      document.getElementById("results").innerHTML =
+        '<div class="empty">No data bundle found.<br>Run <code class="k">python3 scripts/build_store.py</code> to generate <code class="k">app/data.js</code>, or click <b>Load file…</b> above to open <code class="k">store/signals.jsonl</code>.</div>';
+      return;
+    }
+    var inv = investorSignals().length;
+    document.getElementById("genmeta").textContent =
+      (STORE.signals.length) + " engagements · " + inv + " investor signals · generated " +
+      (STORE.generated_at || "?");
+
+    var levels = ["hot", "warm", "cold", "existing_investor"];
+    buildChips("levelChips", levels, state.levels, function (v) { return LVL_LABEL[v] || v; });
+
+    var tax = STORE.taxonomy || {};
+    var acs = (tax.asset_classes || []).filter(function (a) { return a !== "Unspecified"; });
+    // only show asset classes present in investor data, to keep it tight
+    var present = {};
+    investorSignals().forEach(function (s) { (s.asset_classes || []).forEach(function (a) { present[a] = 1; }); });
+    acs = acs.filter(function (a) { return present[a]; });
+    buildChips("acChips", acs, state.acs);
+    buildChips("sentChips", tax.sentiment || ["positive", "neutral", "negative", "mixed"], state.sents);
+    buildChips("urgChips", ["high", "medium", "low"], state.urgs);
+
+    document.getElementById("q").addEventListener("input", function (e) { state.q = e.target.value; render(); });
+    document.getElementById("minTicket").addEventListener("change", function (e) { state.minTicket = +e.target.value; render(); });
+    document.getElementById("inclNon").addEventListener("change", function (e) { state.inclNon = e.target.checked; render(); });
+    document.getElementById("sortBy").addEventListener("change", function (e) { state.sortBy = e.target.value; render(); });
+
+    render();
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>

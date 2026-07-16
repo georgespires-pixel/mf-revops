@@ -11,6 +11,20 @@ self-contained playbook a scheduled Claude Code session runs against live tools
 
 See [HelpCenter setup](#helpcenter-revops-ticket-report) below for the second routine.
 
+## Apps
+
+Beyond the scheduled digests, this repo also hosts on-demand RevOps apps:
+
+| App | Source | Output | Skill |
+|---|---|---|---|
+| **Investor Signals** | HubSpot (calls/emails) + Notion (funds) | Local store + internal query app | [`investor-signals/`](./investor-signals/) · [skill](./.claude/skills/investor-signals-extraction/SKILL.md) |
+
+**Investor Signals** extracts structured investor-interest signals (fund, asset
+class, sentiment, pain points, ticket size, urgency) from HubSpot call summaries
+and emails, normalizes fund names against a canonical list, and persists them to a
+local store the sales team browses in a static [query app](./investor-signals/app/index.html).
+Read-only against HubSpot — no CRM writes. See [`investor-signals/README.md`](./investor-signals/README.md).
+
 ---
 
 ## Funnel & MQL report

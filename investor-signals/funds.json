@@ -1,0 +1,252 @@
+{
+  "_comment": "Canonical fund list for investor-signal normalization. Seeded from the Notion 'Fund Launch Pipeline Tracker' (collection 362bf38b-4866-4cde-9843-2992424d38df) plus Moonfare proprietary products and observed call-transcript variants. The extraction skill refreshes third-party entries from Notion on each run; hand-curated aliases and the brand-normalization rules below are preserved across refreshes.",
+  "_brand_aliases": {
+    "_comment": "HubSpot AI call summaries systematically mis-transcribe the Moonfare brand. Normalize these to 'Moonfare' BEFORE fund matching.",
+    "Moonfare": ["Moonfair", "Moonsphere", "Moon Fair", "Moon Fare", "Moonfaire"]
+  },
+  "funds": [
+    {
+      "fund_id": "moonfare_tech_fund",
+      "name": "Moonfare Tech Fund",
+      "short_name": "MTF",
+      "type": "moonfare_proprietary",
+      "asset_class": "Venture Capital",
+      "status": "Live",
+      "aliases": ["Moonfair Tech Fund", "Moonsphere Tech Fund", "MTF", "Moonfare Technology Fund", "Tech Fund", "MTF US", "MTF (US)"]
+    },
+    {
+      "fund_id": "moonfare_secondary_fund",
+      "name": "Moonfare Secondary Fund",
+      "short_name": "MSF",
+      "type": "moonfare_proprietary",
+      "asset_class": "Secondaries",
+      "status": "Live",
+      "aliases": ["Moonfair Secondary Fund", "Moonsphere Secondary Fund", "Moonfare Secondaries", "Secondary Fund", "MSF"]
+    },
+    {
+      "fund_id": "moonfare_mid_market",
+      "name": "Moonfare Mid-Market Fund",
+      "short_name": "MMF",
+      "type": "moonfare_proprietary",
+      "asset_class": "Buyout",
+      "status": "Pending Kick-Off",
+      "aliases": ["Mid-Market Fund", "MMF", "Moonfare Mid-Market Portfolio", "Mid Market Fund", "Project Flower (MMF)"]
+    },
+    {
+      "fund_id": "eqt_xi",
+      "name": "EQT XI",
+      "type": "third_party",
+      "asset_class": "Buyout",
+      "status": "Live",
+      "aliases": ["EQT XI (US)", "EQT 11", "EQT"]
+    },
+    {
+      "fund_id": "cvc_pe",
+      "name": "CVC-PE",
+      "type": "third_party",
+      "asset_class": "Buyout",
+      "status": "Live",
+      "aliases": ["CVC PE", "CVC-PEF (US)", "CVC PEF", "CVC private equity", "CVC"]
+    },
+    {
+      "fund_id": "cvc_cred",
+      "name": "CVC-CRED",
+      "type": "third_party",
+      "asset_class": "Private Credit",
+      "status": "Live",
+      "aliases": ["CVC Credit", "CVC CRED", "CVC-Credit"]
+    },
+    {
+      "fund_id": "general_catalyst_xiii",
+      "name": "General Catalyst XIII",
+      "type": "third_party",
+      "asset_class": "Venture Capital",
+      "status": "Off Track",
+      "aliases": ["GC XIII", "General Catalyst 13", "General Catalyst"]
+    },
+    {
+      "fund_id": "founders_fund_growth_iv",
+      "name": "Founders Fund Growth IV",
+      "type": "third_party",
+      "asset_class": "Growth Equity",
+      "status": "Closed",
+      "aliases": ["Founders Fund", "Founders Fund Growth", "FF Growth IV"]
+    },
+    {
+      "fund_id": "kkr_americas_xiv",
+      "name": "KKR Americas XIV",
+      "type": "third_party",
+      "asset_class": "Buyout",
+      "status": "Closed",
+      "aliases": ["KKR Americas XIV (CH+Singapore)", "KKR Americas", "KKR Americas Fund XIV"]
+    },
+    {
+      "fund_id": "kkr_asia_v",
+      "name": "KKR Asia V",
+      "type": "third_party",
+      "asset_class": "Buyout",
+      "status": "Pipeline",
+      "aliases": ["KKR Asian Fund V", "KKR Asia"]
+    },
+    {
+      "fund_id": "kkr_ngt_iv",
+      "name": "KKR NGT IV",
+      "type": "third_party",
+      "asset_class": "Growth Equity",
+      "status": "Pipeline",
+      "aliases": ["KKR Next Generation Technology IV", "KKR NGT", "KKR Next Gen Tech"]
+    },
+    {
+      "fund_id": "coatue_ctek",
+      "name": "Coatue (CTEK)",
+      "type": "third_party",
+      "asset_class": "Venture Capital",
+      "status": "At Risk",
+      "aliases": ["Coatue \"CTEK\"", "Coatue CTEK", "Coatue", "CTEK"]
+    },
+    {
+      "fund_id": "lexington_secondaries_xi",
+      "name": "Lexington Secondaries Fund XI",
+      "type": "third_party",
+      "asset_class": "Secondaries",
+      "status": "Live",
+      "aliases": ["Lexington Secondaries", "Lexington XI", "Lexington Partners XI", "Lexington"]
+    },
+    {
+      "fund_id": "bonacord_iii",
+      "name": "Bonacord III",
+      "type": "third_party",
+      "asset_class": "GP Stakes",
+      "status": "Pending Live",
+      "aliases": ["Bonaccord III", "BCP III", "Bonaccord", "Bonacord", "Bonaccord Capital Partners III"]
+    },
+    {
+      "fund_id": "warburg_gg_xv",
+      "name": "Warburg GG XV (US)",
+      "type": "third_party",
+      "asset_class": "Growth Equity",
+      "status": "Live",
+      "aliases": ["Warburg GG XV", "Warburg Pincus Global Growth XV", "Warburg", "WP GG XV"]
+    },
+    {
+      "fund_id": "main_capital_vii",
+      "name": "Main Capital Fund VII",
+      "type": "third_party",
+      "asset_class": "Buyout",
+      "status": "Closed",
+      "aliases": ["MCF VII", "Main Capital VII", "Main Capital", "MCF"]
+    },
+    {
+      "fund_id": "leonard_green_x",
+      "name": "Leonard Green X",
+      "type": "third_party",
+      "asset_class": "Buyout",
+      "status": "Closed",
+      "aliases": ["Leonard Green & Partners X", "LGP X", "Leonard Green"]
+    },
+    {
+      "fund_id": "qualitas_energy_vi",
+      "name": "Qualitas Energy Fund VI",
+      "type": "third_party",
+      "asset_class": "Infrastructure",
+      "status": "Live",
+      "aliases": ["Qualitas Energy VI", "Qualitas Energy", "Qualitas"]
+    },
+    {
+      "fund_id": "kingswood_capital_iv",
+      "name": "Kingswood Capital IV",
+      "type": "third_party",
+      "asset_class": "Buyout",
+      "status": "Live",
+      "aliases": ["Kingswood IV", "Kingswood Capital", "Kingswood"]
+    },
+    {
+      "fund_id": "bregal_unternehmerkapital_v",
+      "name": "Bregal Unternehmerkapital V",
+      "type": "third_party",
+      "asset_class": "Buyout",
+      "status": "Pipeline",
+      "aliases": ["Bregal Unternehmerkapital", "Bregal V", "Bregal"]
+    },
+    {
+      "fund_id": "astorg",
+      "name": "Astorg",
+      "type": "third_party",
+      "asset_class": "Buyout",
+      "status": "Off Track",
+      "aliases": ["Astorg VIII", "Astorg Fund"]
+    },
+    {
+      "fund_id": "overbay_multi_year",
+      "name": "Overbay Capital Partners Multi-Year Fund",
+      "type": "third_party",
+      "asset_class": "Secondaries",
+      "status": "Pipeline",
+      "aliases": ["Overbay Capital Partners", "Overbay", "Overbay Multi-Year Fund"]
+    },
+    {
+      "fund_id": "a16z_lsv",
+      "name": "a16z (LSV V Extension)",
+      "type": "third_party",
+      "asset_class": "Venture Capital",
+      "status": "On Track",
+      "aliases": ["a16z", "Andreessen Horowitz", "a16z LSV", "LSV V Extension", "a16z LSV V"]
+    },
+    {
+      "fund_id": "databricks",
+      "name": "Databricks",
+      "type": "direct_deal",
+      "asset_class": "Direct Deal",
+      "status": "Closed",
+      "aliases": ["Databricks direct", "Databricks co-investment"]
+    },
+    {
+      "fund_id": "stripe",
+      "name": "Stripe",
+      "type": "direct_deal",
+      "asset_class": "Direct Deal",
+      "status": "Closed",
+      "aliases": ["Stripe direct", "Stripe co-investment"]
+    },
+    {
+      "fund_id": "lightspeed",
+      "name": "Lightspeed",
+      "type": "third_party",
+      "asset_class": "Venture Capital",
+      "status": "Pipeline",
+      "aliases": ["Lightspeed Venture Partners", "LSVP"]
+    },
+    {
+      "fund_id": "tcv",
+      "name": "TCV",
+      "type": "third_party",
+      "asset_class": "Growth Equity",
+      "status": "Pipeline",
+      "aliases": ["Technology Crossover Ventures"]
+    },
+    {
+      "fund_id": "dcvc",
+      "name": "DCVC",
+      "type": "third_party",
+      "asset_class": "Venture Capital",
+      "status": "Pipeline",
+      "aliases": ["Data Collective", "DCVC Fund"]
+    },
+    {
+      "fund_id": "baseten",
+      "name": "Baseten",
+      "type": "direct_deal",
+      "asset_class": "Direct Deal",
+      "status": "Pipeline",
+      "aliases": ["Baseten direct"]
+    }
+  ],
+  "competitors": [
+    { "competitor_id": "hamilton_lane", "name": "Hamilton Lane", "aliases": ["Hamilton Lane"] },
+    { "competitor_id": "stepstone", "name": "StepStone", "aliases": ["StepStone", "Step Stone"] },
+    { "competitor_id": "icapital", "name": "iCapital", "aliases": ["iCapital", "i-Capital"] },
+    { "competitor_id": "titanbay", "name": "Titanbay", "aliases": ["Titanbay", "Titan Bay"] },
+    { "competitor_id": "blackstone_bxpe", "name": "Blackstone (BXPE)", "aliases": ["Blackstone", "BXPE"] },
+    { "competitor_id": "partners_group", "name": "Partners Group", "aliases": ["Partners Group"] }
+  ]
+}

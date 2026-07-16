@@ -75,7 +75,13 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (RuntimeError, FileNotFoundError) as exc:
+        # Expected operator errors (missing token, missing/invalid config) —
+        # report cleanly instead of dumping a traceback.
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

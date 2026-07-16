@@ -10,6 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import anthropic
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 
@@ -108,8 +109,15 @@ def create_app(config: Config | None = None) -> FastAPI:
         if not deck_text.strip():
             raise HTTPException(422, "Could not extract any text from the deck.")
 
-        reporter = DeckFitReporter(model=config.model)
-        report = reporter.assess(deck_text, store.all_signals())
+        try:
+            reporter = DeckFitReporter(model=config.model)
+            report = reporter.assess(deck_text, store.all_signals())
+        except (anthropic.AnthropicError, TypeError) as exc:
+            # AnthropicError covers API/rate-limit failures; the SDK raises a
+            # bare TypeError when no credential can be resolved.
+            raise HTTPException(
+                502, f"Claude API call failed (check ANTHROPIC_API_KEY): {exc}"
+            ) from exc
 
         # Join contact names onto the evidence so the report names investors.
         evidence = report.get("evidence", [])

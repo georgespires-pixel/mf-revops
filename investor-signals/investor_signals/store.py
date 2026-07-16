@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Iterator
@@ -74,29 +75,42 @@ def _dedupe_keep_order(items: list[str]) -> list[str]:
 class Store:
     def __init__(self, path: str):
         self._path = path
-        self._conn = sqlite3.connect(path)
+        # check_same_thread=False lets the FastAPI threadpool reuse this
+        # connection; a lock serializes access so concurrent handlers are safe.
+        self._conn = sqlite3.connect(path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
-        self._conn.executescript(SCHEMA)
-        self._conn.commit()
+        self._lock = threading.Lock()
+        with self._lock:
+            self._conn.executescript(SCHEMA)
+            self._conn.commit()
 
     def close(self) -> None:
-        self._conn.close()
+        with self._lock:
+            self._conn.close()
 
     @contextmanager
     def _tx(self) -> Iterator[sqlite3.Connection]:
-        try:
+        with self._lock:
+            try:
+                yield self._conn
+                self._conn.commit()
+            except Exception:
+                self._conn.rollback()
+                raise
+
+    @contextmanager
+    def _read(self) -> Iterator[sqlite3.Connection]:
+        with self._lock:
             yield self._conn
-            self._conn.commit()
-        except Exception:
-            self._conn.rollback()
-            raise
 
     # -- incremental sync state -------------------------------------------
 
     def get_last_ts(self, object_type: str) -> int | None:
-        row = self._conn.execute(
-            "SELECT last_ts_ms FROM sync_state WHERE object_type = ?", (object_type,)
-        ).fetchone()
+        with self._read() as c:
+            row = c.execute(
+                "SELECT last_ts_ms FROM sync_state WHERE object_type = ?",
+                (object_type,),
+            ).fetchone()
         return int(row["last_ts_ms"]) if row else None
 
     def set_last_ts(self, object_type: str, ts_ms: int) -> None:
@@ -114,9 +128,10 @@ class Store:
 
     def is_processed(self, object_type: str, object_id: str) -> bool:
         key = f"{object_type}:{object_id}"
-        row = self._conn.execute(
-            "SELECT 1 FROM processed_engagements WHERE engagement_key = ?", (key,)
-        ).fetchone()
+        with self._read() as c:
+            row = c.execute(
+                "SELECT 1 FROM processed_engagements WHERE engagement_key = ?", (key,)
+            ).fetchone()
         return row is not None
 
     def mark_processed(
@@ -294,7 +309,8 @@ class Store:
         sql = (
             f"SELECT * FROM contact_signals {where} ORDER BY last_signal_date DESC"
         )
-        rows = [self._row_to_dict(r) for r in self._conn.execute(sql, params)]
+        with self._read() as c:
+            rows = [self._row_to_dict(r) for r in c.execute(sql, params)]
 
         if fund:
             rows = [r for r in rows if fund in r["funds_mentioned"]]
@@ -307,18 +323,20 @@ class Store:
         return rows
 
     def all_signals(self) -> list[dict[str, Any]]:
-        return [
-            self._row_to_dict(r)
-            for r in self._conn.execute(
-                "SELECT * FROM contact_signals ORDER BY last_signal_date DESC"
-            )
-        ]
+        with self._read() as c:
+            return [
+                self._row_to_dict(r)
+                for r in c.execute(
+                    "SELECT * FROM contact_signals ORDER BY last_signal_date DESC"
+                )
+            ]
 
     def stats(self) -> dict[str, Any]:
-        total = self._conn.execute(
-            "SELECT COUNT(*) AS n FROM contact_signals"
-        ).fetchone()["n"]
-        processed = self._conn.execute(
-            "SELECT COUNT(*) AS n FROM processed_engagements"
-        ).fetchone()["n"]
+        with self._read() as c:
+            total = c.execute(
+                "SELECT COUNT(*) AS n FROM contact_signals"
+            ).fetchone()["n"]
+            processed = c.execute(
+                "SELECT COUNT(*) AS n FROM processed_engagements"
+            ).fetchone()["n"]
         return {"contacts": total, "processed_engagements": processed}

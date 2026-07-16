@@ -76,6 +76,36 @@ export ANTHROPIC_API_KEY=...          # or `ant auth login`
 python -m investor_signals seed --extract
 ```
 
+## Load a real HubSpot engagement export (.xlsx)
+
+No API needed — point it at a HubSpot engagement export (emails/calls with a
+`body_preview` column):
+
+```bash
+python -m investor_signals import-xlsx path/to/hubspot_engagement_data.xlsx
+python -m investor_signals serve
+```
+
+Offline, it extracts signals with keyword/regex heuristics (modest quality). With
+an Anthropic key set, add `--extract` for the full Claude extraction (much
+better). Contacts are keyed by email and aggregated across engagements.
+
+### Dashboard dimensions
+
+Each contact signal now carries: **asset class** (buyout, venture capital,
+growth, secondaries, private credit, infrastructure, …), **GICS sector**,
+**geography**, **currency**, **fund size**, and buyout **cap size** — all
+filterable, with an "interest by asset class" summary bar.
+
+### Deck fit
+
+Upload a PDF/PPTX and get: a read of the fund (summary, pros/cons, track record,
+main points, what draws investor interest — full narrative with a Claude key,
+key facts extracted from the deck when offline), plus a Low/Medium/High demand
+fit with a **component-by-component breakdown of why**, per-asset-class interest
+%, and named investor evidence. The fit is computed deterministically from the
+signal store, so the score is always explainable.
+
 ## Connecting real HubSpot (later)
 
 ```bash

@@ -62,6 +62,24 @@ def _cmd_seed(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_import(args: argparse.Namespace) -> int:
+    from .import_xlsx import import_xlsx
+
+    config = load_config(args.config)
+    mode = "real-extraction" if args.extract else "offline heuristics"
+    print(f"Importing {args.file} ({mode}) into {config.store_path}")
+    report = import_xlsx(
+        args.file, config, use_llm=args.extract, reset=not args.no_reset
+    )
+    print(report.summary())
+    if report.errors:
+        print("\nErrors:", file=sys.stderr)
+        for e in report.errors[:20]:
+            print(f"  - {e}", file=sys.stderr)
+    print("\nNow run:  python -m investor_signals serve")
+    return 0
+
+
 def _cmd_serve(args: argparse.Namespace) -> int:
     import uvicorn
 
@@ -107,6 +125,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Append to the existing store instead of recreating it.",
     )
     p_seed.set_defaults(func=_cmd_seed)
+
+    p_import = sub.add_parser(
+        "import-xlsx",
+        help="Import a HubSpot engagement .xlsx export into the store.",
+    )
+    p_import.add_argument("file", help="Path to the .xlsx export")
+    p_import.add_argument(
+        "--extract",
+        action="store_true",
+        help="Use the Claude extractor (needs a key). Default is offline heuristics.",
+    )
+    p_import.add_argument("--no-reset", action="store_true")
+    p_import.set_defaults(func=_cmd_import)
 
     p_serve = sub.add_parser("serve", help="Run the local web app.")
     p_serve.add_argument("--host", default=None)

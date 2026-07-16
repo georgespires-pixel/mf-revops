@@ -29,10 +29,47 @@ EXTRACTION_SCHEMA: dict[str, Any] = {
             "items": {"type": "string"},
             "description": "Fund names the investor expressed interest in. Empty if none discussed.",
         },
-        "industry_or_asset_class": {
+        "asset_classes": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "enum": [
+                    "Buyout", "Venture Capital", "Growth Equity", "Secondaries",
+                    "Private Credit", "Infrastructure", "Real Estate",
+                    "Fund of Funds", "Co-Investment",
+                ],
+            },
+            "description": "Private-markets asset classes discussed as interest.",
+        },
+        "gics_sectors": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "enum": [
+                    "Energy", "Materials", "Industrials", "Consumer Discretionary",
+                    "Consumer Staples", "Health Care", "Financials",
+                    "Information Technology", "Communication Services", "Utilities",
+                    "Real Estate",
+                ],
+            },
+            "description": "Underlying GICS sector(s) of interest, if stated.",
+        },
+        "geographies": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "Industries or asset classes discussed as investment interest.",
+            "description": "Geographies of interest (e.g. North America, Europe, DACH, Asia-Pacific, Global).",
+        },
+        "currency": {
+            "anyOf": [{"type": "string"}, {"type": "null"}],
+            "description": "Currency discussed (USD, EUR, GBP, CHF), else null.",
+        },
+        "fund_size_hint": {
+            "anyOf": [{"type": "string"}, {"type": "null"}],
+            "description": "Target/actual fund size discussed (e.g. '€500M'), else null. Distinct from the investor's ticket.",
+        },
+        "cap_size": {
+            "anyOf": [{"type": "string"}, {"type": "null"}],
+            "description": "For buyout interest: 'Small-cap', 'Mid-cap', or 'Large-cap', else null.",
         },
         "sentiment": {
             "type": "string",
@@ -60,7 +97,12 @@ EXTRACTION_SCHEMA: dict[str, Any] = {
     },
     "required": [
         "funds_mentioned",
-        "industry_or_asset_class",
+        "asset_classes",
+        "gics_sectors",
+        "geographies",
+        "currency",
+        "fund_size_hint",
+        "cap_size",
         "sentiment",
         "pain_points",
         "ticket_size_hint",
@@ -83,6 +125,10 @@ questions, capital-call confirmations, login issues, and spam-filter complaints 
 should yield empty funds_mentioned and neutral sentiment even if a fund name is \
 mentioned in passing.
 - Multiple funds per conversation are normal — always emit an array.
+- Capture asset class (buyout, venture capital, growth equity, secondaries, \
+private credit, infrastructure, real estate, fund of funds, co-investment), the \
+underlying GICS sector, geography, currency, fund size, and buyout cap size ONLY \
+when stated or clearly implied; otherwise leave empty / null.
 - evidence_quote must be the specific line that justifies the extraction \
 (~25 words max). If nothing substantive was extracted, use an empty string.
 - Do not invent a numeric interest score. Sentiment and urgency are categorical.

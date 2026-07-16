@@ -56,6 +56,16 @@ python -m investor_signals serve       # then open http://127.0.0.1:8000
 `Ctrl+C` stops the server. Re-run `seed` any time to regenerate data
 (`python -m investor_signals seed --contacts 40` for a bigger set).
 
+### Use a real HubSpot engagement export instead of synthetic data
+
+```bash
+python -m investor_signals import-xlsx path/to/hubspot_engagement_data.xlsx
+python -m investor_signals serve
+```
+
+Offline it extracts signals via keyword/regex heuristics. With `ANTHROPIC_API_KEY`
+set, add `--extract` for the full Claude extraction (much higher quality).
+
 ## 3. Sanity-check tests
 
 ```bash

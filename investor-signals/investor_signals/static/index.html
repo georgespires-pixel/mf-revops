@@ -6,52 +6,85 @@
 <title>Moonfare Investor Signals</title>
 <style>
   :root {
-    --bg: #0f1115; --panel: #1a1d24; --line: #2a2e37; --text: #e6e8ec;
-    --muted: #9aa0aa; --accent: #6ea8fe; --pos: #4ade80; --neg: #f87171; --warn: #fbbf24;
+    --bg:#f6f7f9; --panel:#ffffff; --line:#e4e7ec; --line2:#eef1f4;
+    --text:#1b2130; --muted:#697586; --soft:#8a94a6;
+    --accent:#2563eb; --accent-soft:#eaf1ff;
+    --pos:#15803d; --pos-bg:#e7f6ec; --neu:#6b7280; --neu-bg:#eef0f3;
+    --neg:#b91c1c; --neg-bg:#fbeaea; --warn:#b45309; --warn-bg:#fdf1e3;
+    --chip:#f1f3f6;
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; font: 14px/1.5 -apple-system, Segoe UI, Roboto, sans-serif;
-    background: var(--bg); color: var(--text); }
-  header { padding: 16px 24px; border-bottom: 1px solid var(--line); display: flex;
-    align-items: baseline; gap: 16px; }
-  header h1 { font-size: 18px; margin: 0; }
-  header .sub { color: var(--muted); font-size: 12px; }
-  nav { display: flex; gap: 4px; padding: 0 24px; border-bottom: 1px solid var(--line); }
-  nav button { background: none; border: none; color: var(--muted); padding: 12px 16px;
-    cursor: pointer; border-bottom: 2px solid transparent; font-size: 14px; }
-  nav button.active { color: var(--text); border-bottom-color: var(--accent); }
-  main { padding: 24px; }
-  .filters { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; align-items: end; }
-  .filters label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
-  select, input[type=file] { background: var(--panel); color: var(--text);
-    border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 14px; }
-  button.primary { background: var(--accent); color: #0b1020; border: none; border-radius: 6px;
-    padding: 9px 16px; font-weight: 600; cursor: pointer; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
-  .tag { display: inline-block; background: #232732; border: 1px solid var(--line);
-    border-radius: 999px; padding: 2px 9px; margin: 2px 3px 2px 0; font-size: 12px; }
-  .tag.unmatched { border-color: var(--warn); color: var(--warn); }
-  .sent-positive { color: var(--pos); } .sent-negative { color: var(--neg); }
-  .sent-neutral, .sent-not_applicable { color: var(--muted); }
-  .quote { color: var(--muted); font-style: italic; }
-  .muted { color: var(--muted); }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; max-width: 900px; }
-  .fitbadge { display: inline-block; padding: 6px 14px; border-radius: 8px; font-weight: 700; font-size: 16px; }
-  .fit-High { background: rgba(74,222,128,.15); color: var(--pos); border: 1px solid var(--pos); }
-  .fit-Medium { background: rgba(251,191,36,.15); color: var(--warn); border: 1px solid var(--warn); }
-  .fit-Low { background: rgba(248,113,113,.15); color: var(--neg); border: 1px solid var(--neg); }
-  .hidden { display: none; }
-  .stale { color: var(--warn); font-size: 12px; }
-  .spinner { color: var(--muted); }
-  a { color: var(--accent); }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  header { background:var(--panel); border-bottom:1px solid var(--line);
+    padding:16px 24px; display:flex; align-items:baseline; gap:14px; }
+  header h1 { font-size:17px; margin:0; font-weight:650; }
+  header .sub { color:var(--muted); font-size:12px; }
+  nav { background:var(--panel); border-bottom:1px solid var(--line); padding:0 24px; display:flex; gap:2px; }
+  nav button { background:none; border:none; color:var(--muted); padding:12px 16px; cursor:pointer;
+    border-bottom:2px solid transparent; font-size:14px; font-weight:550; }
+  nav button.active { color:var(--accent); border-bottom-color:var(--accent); }
+  main { padding:22px 24px; max-width:1400px; }
+  h2 { font-size:15px; margin:0 0 12px; }
+  h3 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:20px 0 8px; }
+  .filters { display:flex; flex-wrap:wrap; gap:10px 14px; align-items:end; margin-bottom:18px; }
+  .filters label { display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.03em; }
+  select, input[type=text], input[type=file] { background:var(--panel); color:var(--text);
+    border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:14px; min-width:130px; }
+  select:focus, input:focus { outline:2px solid var(--accent-soft); border-color:var(--accent); }
+  button.primary { background:var(--accent); color:#fff; border:none; border-radius:8px;
+    padding:9px 18px; font-weight:600; cursor:pointer; font-size:14px; }
+  button.primary:hover { filter:brightness(.93); }
+  /* stat bar */
+  .statwrap { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:18px; }
+  .statrow { display:flex; flex-wrap:wrap; gap:18px; }
+  .stat { flex:1 1 150px; min-width:150px; }
+  .stat .ac { font-size:13px; font-weight:600; margin-bottom:2px; }
+  .stat .meta { font-size:11px; color:var(--muted); margin-bottom:6px; }
+  .bar { height:8px; background:var(--line2); border-radius:99px; overflow:hidden; }
+  .bar > span { display:block; height:100%; background:var(--accent); border-radius:99px; }
+  .tblwrap { background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:11px 12px; border-bottom:1px solid var(--line2); vertical-align:top; white-space:nowrap; }
+  th { color:var(--soft); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+    position:sticky; top:0; background:var(--panel); }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:#fafbfc; }
+  .who { font-weight:600; } .who small { display:block; font-weight:400; color:var(--muted); }
+  .chip { display:inline-block; background:var(--chip); border:1px solid var(--line); border-radius:99px;
+    padding:2px 9px; margin:1px 3px 1px 0; font-size:12px; white-space:nowrap; }
+  .chip.unmatched { border-color:var(--warn); color:var(--warn); background:var(--warn-bg); }
+  .chip.hl { background:var(--accent-soft); border-color:#c7dbff; color:var(--accent); }
+  .pill { display:inline-flex; align-items:center; gap:5px; font-weight:600; font-size:12px; padding:2px 9px; border-radius:99px; }
+  .pill::before { content:""; width:7px; height:7px; border-radius:99px; background:currentColor; }
+  .s-positive { color:var(--pos); background:var(--pos-bg); }
+  .s-neutral,.s-not_applicable { color:var(--neu); background:var(--neu-bg); }
+  .s-negative { color:var(--neg); background:var(--neg-bg); }
+  .quote { color:var(--muted); font-style:italic; white-space:normal; max-width:280px; }
+  .muted { color:var(--muted); } .wrap { white-space:normal; }
+  /* deck */
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:16px; }
+  .card.max { max-width:960px; }
+  .fit { display:inline-block; padding:6px 16px; border-radius:9px; font-weight:700; font-size:15px; }
+  .fit-High { background:var(--pos-bg); color:var(--pos); }
+  .fit-Medium { background:var(--warn-bg); color:var(--warn); }
+  .fit-Low { background:var(--neg-bg); color:var(--neg); }
+  .brk { display:grid; grid-template-columns:180px 1fr auto; gap:8px 14px; align-items:center; margin-top:10px; }
+  .brk .f { font-weight:600; } .brk .d { color:var(--muted); font-size:13px; }
+  .pts { font-variant-numeric:tabular-nums; font-weight:600; color:var(--accent); }
+  .cols2 { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  ul.tight { margin:6px 0; padding-left:18px; } ul.tight li { margin:3px 0; }
+  .hidden { display:none; }
+  .pro { color:var(--pos); } .con { color:var(--neg); }
+  a { color:var(--accent); }
+  @media (max-width:720px){ .cols2{grid-template-columns:1fr} .brk{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
 <header>
   <h1>Moonfare Investor Signals</h1>
-  <span class="sub">Read-only · signals from HubSpot calls &amp; emails · names/emails joined live</span>
+  <span class="sub">Read-only · signals from investor calls &amp; emails</span>
 </header>
 <nav>
   <button id="tab-dash" class="active" onclick="showTab('dash')">Sales dashboard</button>
@@ -61,152 +94,177 @@
 <main>
   <!-- Dashboard -->
   <section id="view-dash">
+    <div id="statbar" class="statwrap hidden">
+      <h2 style="margin-bottom:12px">Interest by asset class <span class="muted" id="stat-total"></span></h2>
+      <div class="statrow" id="statrow"></div>
+    </div>
+
     <div class="filters">
-      <label>Fund
-        <select id="f-fund"><option value="">All</option></select>
-      </label>
-      <label>Industry / asset class
-        <input id="f-industry" placeholder="e.g. technology" />
-      </label>
-      <label>Sentiment
-        <select id="f-sentiment">
-          <option value="">All</option>
-          <option value="positive">positive</option>
-          <option value="neutral">neutral</option>
-          <option value="negative">negative</option>
-          <option value="not_applicable">not_applicable</option>
-        </select>
-      </label>
-      <label>Rep (contact owner)
-        <select id="f-rep"><option value="">All</option></select>
-      </label>
+      <label>Fund <select id="f-fund"></select></label>
+      <label>Asset class <select id="f-asset_class"></select></label>
+      <label>GICS sector <select id="f-sector"></select></label>
+      <label>Geography <select id="f-geography"></select></label>
+      <label>Currency <select id="f-currency"></select></label>
+      <label>Cap (buyout) <select id="f-cap_size"></select></label>
+      <label>Sentiment <select id="f-sentiment"></select></label>
+      <label>Rep <select id="f-rep"></select></label>
       <button class="primary" onclick="loadContacts()">Apply</button>
     </div>
-    <div id="dash-status" class="muted"></div>
-    <table id="contacts-table" class="hidden">
-      <thead>
-        <tr>
-          <th>Contact</th><th>Funds</th><th>Industries</th><th>Sentiment</th>
-          <th>Ticket</th><th>Evidence</th><th>Last signal</th>
-        </tr>
-      </thead>
-      <tbody id="contacts-body"></tbody>
-    </table>
+    <div id="dash-status" class="muted" style="margin-bottom:10px"></div>
+    <div class="tblwrap">
+      <table>
+        <thead><tr>
+          <th>Contact</th><th>Asset class</th><th>Sector (GICS)</th><th>Geography</th>
+          <th>Cap</th><th>Currency</th><th>Fund size</th><th>Funds</th>
+          <th>Sentiment</th><th>Ticket</th><th>Evidence</th><th>Last signal</th>
+        </tr></thead>
+        <tbody id="contacts-body"></tbody>
+      </table>
+    </div>
   </section>
 
   <!-- Deck fit -->
   <section id="view-deck" class="hidden">
-    <div class="card">
+    <div class="card max">
       <h2 style="margin-top:0">Deck fit report</h2>
-      <p class="muted">Upload a PDF or PPTX. You'll get a Low / Medium / High fit level with
-        named investor evidence — never a bare numeric score.</p>
+      <p class="muted">Upload a PDF or PPTX. You get a read of the fund plus a Low/Medium/High
+        demand fit with a breakdown of why, and named investor evidence.</p>
       <div class="filters">
         <input type="file" id="deck-file" accept=".pdf,.pptx" />
-        <button class="primary" onclick="submitDeck()">Assess fit</button>
+        <button class="primary" onclick="submitDeck()">Analyze deck</button>
       </div>
       <div id="deck-status" class="muted"></div>
-      <div id="deck-result" class="hidden" style="margin-top:16px"></div>
     </div>
+    <div id="deck-result"></div>
   </section>
 </main>
 
 <script>
-function showTab(t) {
-  document.getElementById('view-dash').classList.toggle('hidden', t !== 'dash');
-  document.getElementById('view-deck').classList.toggle('hidden', t !== 'deck');
-  document.getElementById('tab-dash').classList.toggle('active', t === 'dash');
-  document.getElementById('tab-deck').classList.toggle('active', t === 'deck');
+const $ = id => document.getElementById(id);
+function showTab(t){
+  $('view-dash').classList.toggle('hidden', t!=='dash');
+  $('view-deck').classList.toggle('hidden', t!=='deck');
+  $('tab-dash').classList.toggle('active', t==='dash');
+  $('tab-deck').classList.toggle('active', t==='deck');
+}
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function chips(arr, cls=''){ return (arr||[]).map(x=>`<span class="chip ${cls}">${esc(x)}</span>`).join('') || '<span class="muted">—</span>'; }
+function fill(sel, items, allLabel='All'){
+  const el=$(sel); el.innerHTML=`<option value="">${allLabel}</option>`;
+  (items||[]).forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; el.appendChild(o); });
 }
 
-function esc(s) {
-  return (s == null ? '' : String(s)).replace(/[&<>"]/g, c =>
-    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
-}
-
-async function loadFilters() {
-  const funds = await (await fetch('/api/funds')).json();
-  const fsel = document.getElementById('f-fund');
-  funds.forEach(f => { const o = document.createElement('option'); o.value = f; o.textContent = f; fsel.appendChild(o); });
+async function loadFilters(){
+  const tax = await (await fetch('/api/taxonomy')).json();
+  fill('f-fund', tax.funds); fill('f-asset_class', tax.asset_classes);
+  fill('f-sector', tax.gics_sectors); fill('f-geography', tax.geographies);
+  fill('f-currency', tax.currencies); fill('f-cap_size', tax.cap_sizes);
+  fill('f-sentiment', ['positive','neutral','negative','not_applicable']);
   try {
     const owners = await (await fetch('/api/owners')).json();
-    const rsel = document.getElementById('f-rep');
-    owners.forEach(o => { const el = document.createElement('option'); el.value = o.id; el.textContent = o.name; rsel.appendChild(el); });
-  } catch (e) { /* owners require a HubSpot token; fine to skip */ }
+    const rsel=$('f-rep'); rsel.innerHTML='<option value="">All</option>';
+    owners.forEach(o=>{ const e=document.createElement('option'); e.value=o.id; e.textContent=o.name||o.email||o.id; rsel.appendChild(e); });
+  } catch(e){}
 }
 
-async function loadContacts() {
-  const q = new URLSearchParams();
-  const fund = document.getElementById('f-fund').value;
-  const industry = document.getElementById('f-industry').value;
-  const sentiment = document.getElementById('f-sentiment').value;
-  const rep = document.getElementById('f-rep').value;
-  if (fund) q.set('fund', fund);
-  if (industry) q.set('industry', industry);
-  if (sentiment) q.set('sentiment', sentiment);
-  if (rep) q.set('rep', rep);
+async function loadStats(){
+  const s = await (await fetch('/api/stats')).json();
+  const rows = s.asset_class_interest||[];
+  $('stat-total').textContent = `· ${s.totals.contacts} contacts`;
+  $('statrow').innerHTML = rows.map(r=>`
+    <div class="stat">
+      <div class="ac">${esc(r.asset_class)}</div>
+      <div class="meta">${r.pct}% of contacts · ${r.positive} positive</div>
+      <div class="bar"><span style="width:${Math.max(4,r.pct)}%"></span></div>
+    </div>`).join('') || '<span class="muted">No asset-class interest recorded yet.</span>';
+  $('statbar').classList.remove('hidden');
+}
 
-  const status = document.getElementById('dash-status');
-  status.textContent = 'Loading…';
-  const rows = await (await fetch('/api/contacts?' + q.toString())).json();
-  const tbody = document.getElementById('contacts-body');
-  tbody.innerHTML = '';
-  rows.forEach(r => {
-    const funds = r.funds_mentioned.map(f => `<span class="tag">${esc(f)}</span>`).join('');
-    const unmatched = (r.unmatched_funds || []).map(f =>
-      `<span class="tag unmatched" title="Unmatched — review">${esc(f)}?</span>`).join('');
-    const inds = r.industries.map(i => `<span class="tag">${esc(i)}</span>`).join('');
-    const ev = (r.evidence || []).map(e =>
-      `<div class="quote">“${esc(e.quote)}”<br><span class="muted">${esc(e.call_date||'').slice(0,10)}</span></div>`
-    ).join('');
-    const who = r.display_name
-      ? `${esc(r.display_name)}<br><span class="muted">${esc(r.email||'')}</span>`
-      : `<span class="muted">contact ${esc(r.contact_id)}</span>`;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${who}</td>
-      <td>${funds}${unmatched}</td>
-      <td>${inds}</td>
-      <td class="sent-${esc(r.sentiment_latest)}">${esc(r.sentiment_latest||'—')}</td>
+async function loadContacts(){
+  const q=new URLSearchParams();
+  [['fund','f-fund'],['asset_class','f-asset_class'],['sector','f-sector'],['geography','f-geography'],
+   ['currency','f-currency'],['cap_size','f-cap_size'],['sentiment','f-sentiment'],['rep','f-rep']]
+   .forEach(([k,id])=>{ const v=$(id).value; if(v) q.set(k,v); });
+  $('dash-status').textContent='Loading…';
+  const rows = await (await fetch('/api/contacts?'+q)).json();
+  $('contacts-body').innerHTML = rows.map(r=>{
+    const who = r.display_name ? `${esc(r.display_name)}<small>${esc(r.email||'')}</small>`
+                               : `<span class="muted">${esc(r.contact_id)}</span>`;
+    const ev = (r.evidence||[]).map(e=>`<div class="quote">“${esc(e.quote)}” <span class="muted">${esc((e.call_date||'').slice(0,10))}</span></div>`).join('') || '<span class="muted">—</span>';
+    const funds = chips(r.funds_mentioned) + (r.unmatched_funds||[]).map(f=>`<span class="chip unmatched" title="unmatched — review">${esc(f)}?</span>`).join('');
+    return `<tr>
+      <td class="who">${who}</td>
+      <td class="wrap">${chips(r.asset_classes)}</td>
+      <td class="wrap">${chips(r.gics_sectors)}</td>
+      <td class="wrap">${chips(r.geographies)}</td>
+      <td>${esc(r.cap_size||'—')}</td>
+      <td>${chips(r.currencies)}</td>
+      <td>${esc(r.fund_size_hint||'—')}</td>
+      <td class="wrap">${funds}</td>
+      <td><span class="pill s-${esc(r.sentiment_latest||'neutral')}">${esc(r.sentiment_latest||'—')}</span></td>
       <td>${esc(r.ticket_size_hint||'—')}</td>
-      <td>${ev||'<span class="muted">—</span>'}</td>
-      <td>${esc((r.last_signal_date||'').slice(0,10))}</td>`;
-    tbody.appendChild(tr);
-  });
-  document.getElementById('contacts-table').classList.toggle('hidden', rows.length === 0);
-  status.textContent = rows.length ? `${rows.length} contact(s)` : 'No contacts match these filters.';
+      <td>${ev}</td>
+      <td>${esc((r.last_signal_date||'').slice(0,10))}</td>
+    </tr>`;
+  }).join('');
+  $('dash-status').textContent = rows.length ? `${rows.length} contact(s)` : 'No contacts match these filters.';
 }
 
-async function submitDeck() {
-  const input = document.getElementById('deck-file');
-  const status = document.getElementById('deck-status');
-  const result = document.getElementById('deck-result');
-  if (!input.files.length) { status.textContent = 'Choose a PDF or PPTX first.'; return; }
-  const fd = new FormData();
-  fd.append('file', input.files[0]);
-  status.innerHTML = '<span class="spinner">Assessing fit against the signal store…</span>';
-  result.classList.add('hidden');
-  const resp = await fetch('/api/deck-fit', { method: 'POST', body: fd });
-  if (!resp.ok) { status.textContent = 'Error: ' + (await resp.text()); return; }
-  const r = await resp.json();
-  status.textContent = '';
-  const evidence = (r.evidence||[]).map(e => `
-    <li>
-      <strong>${esc(e.contact_name || ('contact ' + e.contact_id))}</strong>
-      — ${esc(e.fund_or_industry)} ${e.stale ? '<span class="stale">(stale)</span>' : ''}<br>
-      ${esc(e.why)}<br>
-      <span class="quote">“${esc(e.quote)}”</span>
-    </li>`).join('');
-  result.innerHTML = `
-    <div><span class="fitbadge fit-${esc(r.fit_level)}">${esc(r.fit_level)} fit</span></div>
-    <p>${esc(r.summary)}</p>
-    ${r.matched_funds && r.matched_funds.length ? `<p class="muted">Funds: ${r.matched_funds.map(esc).join(', ')}</p>` : ''}
-    <h3>Named investor evidence</h3>
-    <ul>${evidence || '<li class="muted">No supporting demand found in the signal store.</li>'}</ul>
-    ${(r.caveats&&r.caveats.length) ? `<h3>Caveats</h3><ul>${r.caveats.map(c=>`<li>${esc(c)}</li>`).join('')}</ul>` : ''}`;
-  result.classList.remove('hidden');
+async function submitDeck(){
+  const input=$('deck-file');
+  if(!input.files.length){ $('deck-status').textContent='Choose a PDF or PPTX first.'; return; }
+  const fd=new FormData(); fd.append('file', input.files[0]);
+  $('deck-status').textContent='Analyzing deck…'; $('deck-result').innerHTML='';
+  const resp=await fetch('/api/deck-fit',{method:'POST',body:fd});
+  if(!resp.ok){ $('deck-status').textContent='Error: '+(await resp.text()); return; }
+  const r=await resp.json(); $('deck-status').textContent='';
+  const f=r.deck_facts||{};
+  const facts=[['Asset class',(f.asset_classes||[]).join(', ')],['Sector',(f.gics_sectors||[]).join(', ')],
+    ['Geography',(f.geographies||[]).join(', ')],['Currency',f.currency],['Fund size',f.fund_size],['Cap',f.cap_size]]
+    .filter(([,v])=>v&&v.length).map(([k,v])=>`<span class="chip">${esc(k)}: ${esc(v)}</span>`).join('');
+  const brk=(r.score_breakdown||[]).map(b=>`
+    <div class="f">${esc(b.factor)}</div><div class="d">${esc(b.detail)}</div><div class="pts">+${b.points}</div>`).join('');
+  const acInterest=(r.asset_class_interest||[]).map(a=>`
+    <div class="stat"><div class="ac">${esc(a.asset_class)} ${a.in_deck?'<span class="chip hl">in deck</span>':''}</div>
+    <div class="meta">${a.pct}% · ${a.positive} positive</div>
+    <div class="bar"><span style="width:${Math.max(4,a.pct)}%"></span></div></div>`).join('');
+  const evidence=(r.evidence||[]).map(e=>`<li><strong>${esc(e.contact_name||e.contact_id)}</strong> — ${esc(e.fund_or_industry)}
+    <span class="muted">(${esc(e.why)})</span>${e.quote?`<br><span class="quote">“${esc(e.quote)}”</span>`:''}</li>`).join('');
+  const list=(arr,cls='')=> (arr&&arr.length)?`<ul class="tight ${cls}">${arr.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'';
+  const sec=(title,html)=> html?`<h3>${title}</h3>${html}`:'';
+
+  $('deck-result').innerHTML = `
+    <div class="card max">
+      <span class="fit fit-${esc(r.fit_level)}">${esc(r.fit_level)} demand fit</span>
+      <p style="margin:12px 0 0">${esc(r.summary)}</p>
+      <h3>Why this score</h3>
+      <div class="brk">${brk||'<span class="muted">—</span>'}</div>
+    </div>
+    <div class="card max">
+      <h2 style="margin-top:0">The fund</h2>
+      ${facts?`<div style="margin-bottom:10px">${facts}</div>`:''}
+      ${r.fund_summary?`<p>${esc(r.fund_summary)}</p>`:''}
+      ${r.one_paragraph?`<p>${esc(r.one_paragraph)}</p>`:''}
+      <div class="cols2">
+        <div>${sec('Pros', list(r.pros,'pro'))}</div>
+        <div>${sec('Cons', list(r.cons,'con'))}</div>
+      </div>
+      ${sec('Track record', r.track_record?`<p>${esc(r.track_record)}</p>`:'')}
+      ${sec('Main points', list(r.main_points))}
+      ${sec('What would draw investor interest', list(r.investor_attention))}
+    </div>
+    <div class="card max">
+      <h2 style="margin-top:0">Demand in the signal store</h2>
+      ${acInterest?`<div class="statrow">${acInterest}</div>`:'<span class="muted">No overlapping asset-class interest.</span>'}
+      <h3>Named investor evidence</h3>
+      <ul class="tight">${evidence||'<li class="muted">No overlapping contacts in the store.</li>'}</ul>
+    </div>
+    <div class="card max">
+      <h3 style="margin-top:0">Caveats</h3>${list(r.caveats)}
+    </div>`;
 }
 
-loadFilters().then(loadContacts);
+loadFilters().then(()=>{ loadStats(); loadContacts(); });
 </script>
 </body>
 </html>

@@ -76,6 +76,26 @@ def create_app(config: Config | None = None) -> FastAPI:
     def funds() -> list[str]:
         return canonical_fund_names()
 
+    @app.get("/api/taxonomy")
+    def taxonomy_endpoint() -> dict[str, Any]:
+        from . import taxonomy as tax
+
+        return {
+            "funds": canonical_fund_names(),
+            "asset_classes": tax.ASSET_CLASSES,
+            "gics_sectors": tax.GICS_SECTORS,
+            "geographies": tax.GEOGRAPHIES,
+            "currencies": tax.CURRENCIES,
+            "cap_sizes": tax.CAP_SIZES,
+        }
+
+    @app.get("/api/stats")
+    def stats() -> dict[str, Any]:
+        return {
+            "totals": store.stats(),
+            "asset_class_interest": store.asset_class_interest(),
+        }
+
     @app.get("/api/owners")
     def owners() -> list[dict[str, Any]]:
         if hs:
@@ -103,12 +123,17 @@ def create_app(config: Config | None = None) -> FastAPI:
         # evaluates on Python 3.10+. This keeps the app runnable on 3.9 (macOS
         # system Python) without extra packages.
         fund: Optional[str] = Query(None),
-        industry: Optional[str] = Query(None),
+        asset_class: Optional[str] = Query(None),
+        sector: Optional[str] = Query(None),
+        geography: Optional[str] = Query(None),
+        currency: Optional[str] = Query(None),
+        cap_size: Optional[str] = Query(None),
         sentiment: Optional[str] = Query(None),
         rep: Optional[str] = Query(None, description="contact owner id"),
     ) -> list[dict[str, Any]]:
         rows = store.query_contacts(
-            fund=fund, industry=industry, sentiment=sentiment, owner_id=rep
+            fund=fund, asset_class=asset_class, sector=sector, geography=geography,
+            currency=currency, cap_size=cap_size, sentiment=sentiment, owner_id=rep,
         )
         return _attach_contact_details(rows)
 

@@ -97,8 +97,8 @@ def seed_store(
                 **eng.truth,
             }
 
-        if not extraction.get("funds_mentioned") and not extraction.get(
-            "industry_or_asset_class"
+        if not extraction.get("funds_mentioned") and not (
+            extraction.get("asset_classes") or extraction.get("industry_or_asset_class")
         ):
             # Servicing / no-interest engagement: record it as processed but
             # write no investor signal (matches the pipeline's real behavior).

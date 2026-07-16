@@ -1,81 +1,36 @@
 """Deck-fit report: score an uploaded investment deck against the local signals.
 
-The investment team drops in a PDF/PPTX; they get a Low/Medium/High fit report
-with NAMED investor evidence — never a bare numeric score. Per the skill's honesty
-check: a fake-precise number invites over-trust; a Low/Medium/High level with the
-evidence quote attached is defensible. If asked for a number, we decline and
-explain why.
+The investment team drops in a PDF/PPTX and gets:
+  * a read of the fund (summary, pros/cons, track record, main points, what would
+    draw investor attention) — from Claude when a key is set, else key facts
+    extracted from the deck heuristically,
+  * a Low/Medium/High demand fit with a GRANULAR, auditable breakdown of *why*,
+    computed deterministically from the signal store (not invented by the model),
+  * stats: for each asset class the deck targets, the % of contacts that have
+    expressed interest, and named investor evidence.
 
-Stale-data check: signals whose last qualifying call is older than ~6 months are
-flagged stale rather than presented as current interest.
+Never a bare numeric score: fit is categorical, with the component breakdown
+attached so a Medium is explainable. Signals older than ~6 months are flagged
+stale rather than presented as current interest.
 """
 
 from __future__ import annotations
 
 import io
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import anthropic
 
+from . import taxonomy
+
 STALE_AFTER_DAYS = 183  # ~6 months
 
-FIT_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "additionalProperties": False,
-    "properties": {
-        "fit_level": {"type": "string", "enum": ["Low", "Medium", "High"]},
-        "summary": {
-            "type": "string",
-            "description": "Plain-language rationale for the fit level.",
-        },
-        "matched_funds": {"type": "array", "items": {"type": "string"}},
-        "matched_industries": {"type": "array", "items": {"type": "string"}},
-        "evidence": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {
-                    "contact_id": {"type": "string"},
-                    "fund_or_industry": {"type": "string"},
-                    "why": {"type": "string"},
-                    "quote": {"type": "string"},
-                    "stale": {"type": "boolean"},
-                },
-                "required": ["contact_id", "fund_or_industry", "why", "quote", "stale"],
-            },
-        },
-        "caveats": {"type": "array", "items": {"type": "string"}},
-    },
-    "required": [
-        "fit_level",
-        "summary",
-        "matched_funds",
-        "matched_industries",
-        "evidence",
-        "caveats",
-    ],
-}
-
-SYSTEM_PROMPT = """\
-You assess how well an investment deck fits Moonfare's existing investor demand, \
-using ONLY the provided per-contact signal dataset (extracted from investor calls \
-and emails).
-
-Rules:
-- Output a categorical fit level (Low / Medium / High), never a numeric score. A \
-fake-precise number invites over-trust; a level with named evidence is defensible.
-- Every point of the assessment must cite specific contacts by contact_id with \
-the evidence quote that justifies it. Do not claim interest you cannot point to.
-- A contact whose signal is marked stale (last_signal_date older than ~6 months) \
-must be flagged stale=true in the evidence and must not be presented as current \
-interest.
-- If the dataset contains no relevant demand for the deck's thesis, say so \
-plainly and return fit_level "Low" with empty evidence.
-"""
-
+# ---------------------------------------------------------------------------
+# Deck reading
+# ---------------------------------------------------------------------------
 
 def extract_deck_text(filename: str, data: bytes) -> str:
     """Extract plain text from a PDF or PPTX deck."""
@@ -98,104 +53,245 @@ def extract_deck_text(filename: str, data: bytes) -> str:
     raise ValueError("Unsupported deck format — upload a PDF or PPTX.")
 
 
+_MONEY = r"(?:€|\$|£|EUR|USD|GBP|CHF)\s?\d[\d,\.]*\s?(?:k|m|mn|million|bn|billion|b)?"
+_METRIC_PATTERNS = [
+    (r"\d+(?:\.\d+)?\s*%\s*(?:net\s*)?irr", "IRR"),
+    (r"irr\s*(?:of\s*)?\d+(?:\.\d+)?\s*%", "IRR"),
+    (r"\d+(?:\.\d+)?\s*x\s*(?:net\s*)?(?:moic|multiple|tvpi|dpi)", "Multiple"),
+    (r"(?:moic|tvpi|dpi)\s*(?:of\s*)?\d+(?:\.\d+)?\s*x", "Multiple"),
+    (r"vintage\s*20\d\d", "Vintage"),
+    (rf"fund\s*size\s*(?:of\s*)?{_MONEY}", "Fund size"),
+    (rf"target(?:ing)?\s*{_MONEY}", "Target"),
+]
+
+
+def _map(text: str, mapping: dict[str, str]) -> list[str]:
+    out: list[str] = []
+    for needle, label in mapping.items():
+        if needle in text and label not in out:
+            out.append(label)
+    return out
+
+
+def deck_facts(deck_text: str) -> dict[str, Any]:
+    """Structured facts pulled from the deck text (regex/keyword; no LLM)."""
+    text = f" {deck_text.lower()} "
+    metrics: list[str] = []
+    for pattern, _label in _METRIC_PATTERNS:
+        for m in re.findall(pattern, deck_text, flags=re.IGNORECASE):
+            frag = m if isinstance(m, str) else " ".join(m)
+            frag = frag.strip()
+            if frag and frag not in metrics:
+                metrics.append(frag)
+    currencies = _map(text, taxonomy.CURRENCY_KEYWORDS)
+    fund_size = None
+    fs = re.search(rf"(?:fund\s*size|target(?:ing)?|raising)\s*(?:of\s*)?({_MONEY})",
+                   deck_text, flags=re.IGNORECASE)
+    if fs:
+        fund_size = fs.group(1).strip()
+    return {
+        "asset_classes": _map(text, taxonomy.ASSET_CLASS_KEYWORDS),
+        "gics_sectors": _map(text, taxonomy.GICS_KEYWORDS),
+        "geographies": _map(text, taxonomy.GEOGRAPHY_KEYWORDS),
+        "currency": currencies[0] if currencies else None,
+        "cap_size": (_map(text, taxonomy.CAP_KEYWORDS) or [None])[0],
+        "fund_size": fund_size,
+        "metrics": metrics[:8],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Demand analysis (deterministic — this is what makes the score explainable)
+# ---------------------------------------------------------------------------
+
 def _mark_stale(signals: list[dict[str, Any]]) -> list[dict[str, Any]]:
     cutoff = (datetime.now(timezone.utc) - timedelta(days=STALE_AFTER_DAYS)).isoformat()
-    compact: list[dict[str, Any]] = []
     for s in signals:
-        last = s.get("last_signal_date") or ""
-        compact.append(
-            {
-                "contact_id": s["contact_id"],
-                "contact_owner_id": s.get("contact_owner_id"),
-                "funds_mentioned": s.get("funds_mentioned", []),
-                "industries": s.get("industries", []),
-                "sentiment_latest": s.get("sentiment_latest"),
-                "ticket_size_hint": s.get("ticket_size_hint"),
-                "evidence": s.get("evidence", []),
-                "last_signal_date": last,
-                "stale": bool(last and last < cutoff),
-            }
-        )
-    return compact
+        s["stale"] = bool((s.get("last_signal_date") or "") and s["last_signal_date"] < cutoff)
+    return signals
 
 
-def heuristic_assess(deck_text: str, signals: list[dict[str, Any]]) -> dict[str, Any]:
-    """Offline deck-fit: keyword overlap between the deck and stored demand.
+def demand_analysis(signals: list[dict[str, Any]], facts: dict[str, Any]) -> dict[str, Any]:
+    """Deterministic fit from the store: matches, per-asset-class interest %,
+    a component score breakdown, and named evidence."""
+    from .normalize import _load_canonical
 
-    Used in MVP/offline mode (no Claude key). Honest by construction — it returns
-    a categorical Low/Medium/High with named evidence, and a caveat stating it's a
-    keyword-overlap heuristic, not a model assessment. Still never a bare score.
-    """
-    from .normalize import _load_canonical  # local import to avoid cycle at import
+    dataset = _mark_stale([dict(s) for s in signals])
+    total = len(dataset) or 1
+    deck_text_l = " " + " ".join(
+        facts.get("asset_classes", []) + facts.get("gics_sectors", [])
+        + facts.get("geographies", [])
+    ).lower() + " "
 
-    text = deck_text.lower()
-    dataset = _mark_stale(signals)
+    # Funds the deck names.
+    matched_funds = [
+        f["canonical_name"]
+        for f in _load_canonical().values()
+        if any(n in deck_text_l for n in [f["canonical_name"].lower()])
+    ]
+    deck_acs = set(facts.get("asset_classes", []))
+    deck_secs = set(facts.get("gics_sectors", []))
+    deck_geos = set(facts.get("geographies", []))
 
-    # Which canonical funds does the deck reference (by name or alias)?
-    matched_funds: list[str] = []
-    for fund in _load_canonical().values():
-        needles = [fund["canonical_name"].lower()] + [
-            a.lower() for a in fund.get("aliases", [])
-        ]
-        if any(n in text for n in needles):
-            matched_funds.append(fund["canonical_name"])
-
-    # Which industries present in the store does the deck reference?
-    all_inds = {i for s in dataset for i in s.get("industries", [])}
-    matched_inds = sorted(i for i in all_inds if i.lower() in text)
-
-    evidence: list[dict[str, Any]] = []
-    strong = 0
+    # Per-asset-class interest across ALL contacts (the requested stat).
+    ac_counts: dict[str, dict[str, int]] = {}
     for s in dataset:
-        fund_overlap = sorted(set(s.get("funds_mentioned", [])) & set(matched_funds))
-        ind_overlap = sorted(set(s.get("industries", [])) & set(matched_inds))
-        if not fund_overlap and not ind_overlap:
+        pos = s.get("sentiment_latest") == "positive" and not s["stale"]
+        for ac in s.get("asset_classes", []):
+            d = ac_counts.setdefault(ac, {"contacts": 0, "positive": 0})
+            d["contacts"] += 1
+            d["positive"] += 1 if pos else 0
+    asset_class_interest = sorted(
+        (
+            {
+                "asset_class": ac,
+                "contacts": d["contacts"],
+                "positive": d["positive"],
+                "pct": round(100 * d["contacts"] / total),
+                "in_deck": ac in deck_acs,
+            }
+            for ac, d in ac_counts.items()
+        ),
+        key=lambda x: (x["in_deck"], x["contacts"]),
+        reverse=True,
+    )
+
+    # Named evidence: contacts overlapping the deck on asset class / sector /
+    # geography / fund.
+    evidence: list[dict[str, Any]] = []
+    positive_overlap = 0
+    for s in dataset:
+        overlaps: list[str] = []
+        overlaps += sorted(deck_acs & set(s.get("asset_classes", [])))
+        overlaps += sorted(deck_secs & set(s.get("gics_sectors", [])))
+        overlaps += sorted(deck_geos & set(s.get("geographies", [])))
+        overlaps += sorted(set(matched_funds) & set(s.get("funds_mentioned", [])))
+        if not overlaps:
             continue
         sentiment = s.get("sentiment_latest")
         if sentiment == "positive" and not s["stale"]:
-            strong += 1
-        quote = ""
-        ev = s.get("evidence") or []
-        if ev:
-            quote = ev[0].get("quote", "")
+            positive_overlap += 1
+        quote = (s.get("evidence") or [{}])[0].get("quote", "")
         evidence.append(
             {
                 "contact_id": s["contact_id"],
-                "fund_or_industry": ", ".join(fund_overlap + ind_overlap),
-                "why": f"Signal sentiment: {sentiment or 'unknown'}"
-                + (" (stale)" if s["stale"] else ""),
+                "fund_or_industry": ", ".join(dict.fromkeys(overlaps)),
+                "why": f"sentiment: {sentiment or 'unknown'}" + (" · stale" if s["stale"] else ""),
                 "quote": quote,
                 "stale": s["stale"],
             }
         )
 
-    if strong >= 3:
-        level = "High"
-    elif evidence:
-        level = "Medium"
-    else:
-        level = "Low"
+    # Component score breakdown -> fit level.
+    ac_demand = sum(ac_counts.get(ac, {}).get("contacts", 0) for ac in deck_acs)
+    ac_positive = sum(ac_counts.get(ac, {}).get("positive", 0) for ac in deck_acs)
+    breakdown = [
+        {
+            "factor": "Asset-class demand",
+            "detail": f"{ac_demand} contact(s) interested in {', '.join(deck_acs) or 'the deck asset class(es)'}"
+            + (f"; {ac_positive} currently positive" if ac_demand else ""),
+            "points": min(3, ac_demand) + (1 if ac_positive else 0),
+        },
+        {
+            "factor": "Fund overlap",
+            "detail": f"deck names {len(matched_funds)} fund(s) present in the store"
+            if matched_funds else "no Moonfare fund from the store named in the deck",
+            "points": min(2, len(matched_funds)),
+        },
+        {
+            "factor": "Positive, current interest",
+            "detail": f"{positive_overlap} overlapping contact(s) with positive, non-stale sentiment",
+            "points": min(3, positive_overlap),
+        },
+        {
+            "factor": "Sector / geography overlap",
+            "detail": f"{len(deck_secs)} sector + {len(deck_geos)} geography theme(s) shared",
+            "points": 1 if (deck_secs or deck_geos) and evidence else 0,
+        },
+    ]
+    score = sum(b["points"] for b in breakdown)
+    level = "High" if score >= 6 else "Medium" if score >= 2 else "Low"
 
     summary = (
-        f"Offline keyword-overlap assessment. The deck references "
-        f"{len(matched_funds)} known fund(s) and {len(matched_inds)} industry theme(s) "
-        f"present in the signal store; {len(evidence)} contact(s) show overlapping "
-        f"demand ({strong} with current positive sentiment)."
+        f"{len(evidence)} contact(s) in the store overlap the deck's thesis "
+        f"({positive_overlap} with current positive sentiment). Fit is {level} "
+        f"based on the component breakdown below."
         if evidence
-        else "The deck's themes don't overlap with any current demand in the signal store."
+        else "No contacts in the store overlap this deck's asset class, sectors, "
+        "geography, or named funds — Low demand fit."
     )
     return {
         "fit_level": level,
         "summary": summary,
         "matched_funds": matched_funds,
-        "matched_industries": matched_inds,
+        "matched_asset_classes": sorted(
+            deck_acs & {ac for s in dataset for ac in s.get("asset_classes", [])}
+        ),
+        "matched_industries": sorted(
+            deck_secs & {s2 for s in dataset for s2 in s.get("gics_sectors", [])}
+        ),
+        "score_breakdown": breakdown,
+        "asset_class_interest": asset_class_interest,
         "evidence": evidence,
-        "caveats": [
-            "Offline heuristic (keyword overlap), not a model assessment — run with "
-            "an Anthropic API key for a nuanced read.",
-            "Fit is categorical by design; there is deliberately no numeric score.",
-        ],
     }
+
+
+def _heuristic_narrative(facts: dict[str, Any]) -> dict[str, Any]:
+    """Deck read without an LLM: surface the extracted facts, no prose invented."""
+    bits = []
+    if facts["asset_classes"]:
+        bits.append(f"asset class: {', '.join(facts['asset_classes'])}")
+    if facts["geographies"]:
+        bits.append(f"geography: {', '.join(facts['geographies'])}")
+    if facts["fund_size"]:
+        bits.append(f"fund size: {facts['fund_size']}")
+    if facts["cap_size"]:
+        bits.append(f"cap: {facts['cap_size']}")
+    return {
+        "fund_summary": "",
+        "one_paragraph": "",
+        "pros": [],
+        "cons": [],
+        "track_record": ", ".join(facts["metrics"]) if facts["metrics"] else "",
+        "main_points": [b.capitalize() for b in bits],
+        "investor_attention": [],
+    }
+
+
+# ---------------------------------------------------------------------------
+# LLM narrative
+# ---------------------------------------------------------------------------
+
+NARRATIVE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "fund_summary": {"type": "string", "description": "A few sentences on what the fund is."},
+        "one_paragraph": {"type": "string", "description": "One-paragraph investor-facing overview."},
+        "pros": {"type": "array", "items": {"type": "string"}},
+        "cons": {"type": "array", "items": {"type": "string"}},
+        "track_record": {"type": "string", "description": "Track record: IRR/MOIC/vintages/prior funds if stated."},
+        "main_points": {"type": "array", "items": {"type": "string"}},
+        "investor_attention": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "What would draw investor attention or interest.",
+        },
+    },
+    "required": [
+        "fund_summary", "one_paragraph", "pros", "cons",
+        "track_record", "main_points", "investor_attention",
+    ],
+}
+
+NARRATIVE_PROMPT = """\
+You are reading a private-markets fund deck for Moonfare's investment team. From \
+the deck text ONLY, produce: a few-sentence summary of the fund, a one-paragraph \
+investor-facing overview, pros and cons, the track record (IRR/MOIC/vintages/prior \
+funds if stated), the main points, and what would draw investor attention. Be \
+concrete and grounded in the deck — do not invent numbers. Do not output any fit \
+score; a separate step computes demand fit from CRM signals.
+"""
 
 
 class DeckFitReporter:
@@ -203,20 +299,38 @@ class DeckFitReporter:
         self._client = client or anthropic.Anthropic()
         self._model = model
 
-    def assess(self, deck_text: str, signals: list[dict[str, Any]]) -> dict[str, Any]:
-        dataset = _mark_stale(signals)
-        user_content = (
-            "INVESTOR SIGNAL DATASET (JSON):\n"
-            f"{json.dumps(dataset, indent=2)}\n\n"
-            "DECK TEXT:\n"
-            f"{deck_text[:40000]}"  # bound very large decks
-        )
+    def _narrative(self, deck_text: str) -> dict[str, Any]:
         response = self._client.messages.create(
             model=self._model,
-            max_tokens=4000,
-            system=SYSTEM_PROMPT,
-            output_config={"format": {"type": "json_schema", "schema": FIT_SCHEMA}},
-            messages=[{"role": "user", "content": user_content}],
+            max_tokens=2500,
+            system=NARRATIVE_PROMPT,
+            output_config={"format": {"type": "json_schema", "schema": NARRATIVE_SCHEMA}},
+            messages=[{"role": "user", "content": f"DECK TEXT:\n{deck_text[:40000]}"}],
         )
         text = next((b.text for b in response.content if b.type == "text"), "{}")
         return json.loads(text)
+
+    def assess(self, deck_text: str, signals: list[dict[str, Any]]) -> dict[str, Any]:
+        facts = deck_facts(deck_text)
+        report = demand_analysis(signals, facts)
+        report.update(self._narrative(deck_text))
+        report["deck_facts"] = facts
+        report["caveats"] = [
+            "Fit is categorical with a component breakdown; there is deliberately no numeric score.",
+            "Demand fit is computed from the signal store; the fund read is model-generated from the deck.",
+        ]
+        return report
+
+
+def heuristic_assess(deck_text: str, signals: list[dict[str, Any]]) -> dict[str, Any]:
+    """Fully offline path: deterministic demand analysis + facts-only deck read."""
+    facts = deck_facts(deck_text)
+    report = demand_analysis(signals, facts)
+    report.update(_heuristic_narrative(facts))
+    report["deck_facts"] = facts
+    report["caveats"] = [
+        "Offline mode: the fund read shows facts extracted from the deck (no model summary). "
+        "Set an Anthropic API key for a full narrative (summary, pros/cons, track record).",
+        "Demand fit is computed from the signal store; fit is categorical with a component breakdown, never a bare number.",
+    ]
+    return report

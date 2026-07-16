@@ -64,13 +64,46 @@ FUND_FAMILIES = {
         "Moonfare Secondaries Fund II", "secondaries ii", "the secondaries fund",
     ],
 }
-FUND_INDUSTRY = {
-    "Moonfare Technology Fund": "technology",
-    "Moonfare Buyout Fund III": "buyout",
-    "Moonfare Infrastructure Fund": "infrastructure",
-    "Moonfare Private Credit Fund": "private credit",
-    "Moonfare Secondaries Fund II": "secondaries",
+# Per-fund attributes so synthetic signals carry realistic asset class / GICS
+# sector / geography / cap size.
+FUND_META = {
+    "Moonfare Technology Fund": {
+        "asset_class": "Growth Equity",
+        "sectors": ["Information Technology", "Communication Services"],
+        "geographies": ["North America", "Global"],
+        "cap": None,
+        "fund_size": "$750M",
+    },
+    "Moonfare Buyout Fund III": {
+        "asset_class": "Buyout",
+        "sectors": ["Industrials", "Consumer Discretionary", "Health Care"],
+        "geographies": ["Europe", "North America"],
+        "cap": "Large-cap",
+        "fund_size": "€2.5B",
+    },
+    "Moonfare Infrastructure Fund": {
+        "asset_class": "Infrastructure",
+        "sectors": ["Utilities", "Industrials"],
+        "geographies": ["Europe", "Global"],
+        "cap": None,
+        "fund_size": "€1.2B",
+    },
+    "Moonfare Private Credit Fund": {
+        "asset_class": "Private Credit",
+        "sectors": ["Financials"],
+        "geographies": ["North America", "Europe"],
+        "cap": "Mid-cap",
+        "fund_size": "$900M",
+    },
+    "Moonfare Secondaries Fund II": {
+        "asset_class": "Secondaries",
+        "sectors": ["Financials", "Information Technology"],
+        "geographies": ["Global"],
+        "cap": None,
+        "fund_size": "$3B",
+    },
 }
+CURRENCIES = ["USD", "EUR", "GBP", "CHF"]
 
 TICKETS = ["€250k", "$500k", "€1M", "$2M", None, None]
 PAIN_POINTS = [
@@ -163,7 +196,12 @@ def generate(
             if rng.random() < 0.30:
                 truth = {
                     "funds_mentioned": [],
-                    "industry_or_asset_class": [],
+                    "asset_classes": [],
+                    "gics_sectors": [],
+                    "geographies": [],
+                    "currency": None,
+                    "fund_size_hint": None,
+                    "cap_size": None,
                     "sentiment": "neutral",
                     "pain_points": [],
                     "ticket_size_hint": None,
@@ -214,11 +252,23 @@ def generate(
                 else "Follow up next quarter." if sentiment == "neutral"
                 else None
             )
-            industries = [FUND_INDUSTRY[k] for k in fund_keys]
+            metas = [FUND_META[k] for k in fund_keys]
+            asset_classes = sorted({m["asset_class"] for m in metas})
+            sectors = sorted({s for m in metas for s in m["sectors"]})
+            geographies = sorted({g for m in metas for g in m["geographies"]})
+            caps = [m["cap"] for m in metas if m["cap"]]
+            cap_size = caps[0] if caps else None
+            currency = rng.choice(CURRENCIES)
+            fund_size = metas[0]["fund_size"]
 
             truth = {
                 "funds_mentioned": fund_variants,
-                "industry_or_asset_class": industries,
+                "asset_classes": asset_classes,
+                "gics_sectors": sectors,
+                "geographies": geographies,
+                "currency": currency,
+                "fund_size_hint": fund_size,
+                "cap_size": cap_size,
                 "sentiment": sentiment,
                 "pain_points": pains,
                 "ticket_size_hint": ticket,
@@ -228,22 +278,25 @@ def generate(
             }
 
             fund_phrase = " and ".join(fund_variants)
+            geo_phrase = geographies[0] if geographies else "global"
             if object_type == "calls":
                 title = f"Intro call — {fund_keys[0]}"
-                pain_clause = (
-                    f" They raised {', '.join(pains)}." if pains else ""
-                )
+                pain_clause = f" They raised {', '.join(pains)}." if pains else ""
+                cap_clause = f" ({cap_size} focus)" if cap_size else ""
                 body = (
-                    f"Call with {name}. We walked through {fund_phrase} and the broader "
-                    f"{industries[0]} thesis. Investor was {sentiment}. "
-                    f"\"{quote}\"{pain_clause} {_ticket_clause(ticket)}"
+                    f"Call with {name}. We walked through {fund_phrase}{cap_clause}, a "
+                    f"{asset_classes[0].lower()} strategy focused on {geo_phrase} "
+                    f"({', '.join(sectors[:2])}). Fund size ~{fund_size}. "
+                    f"Investor was {sentiment}. \"{quote}\"{pain_clause} "
+                    f"{_ticket_clause(ticket)}"
                     f"{('Next steps: ' + next_steps) if next_steps else ''}"
                 ).strip()
             else:
                 title = f"Re: {fund_variants[0]} materials"
                 body = (
-                    f"Hi {rep_first},\n\nThanks for the {fund_phrase} deck. {quote} "
-                    f"{_ticket_clause(ticket)}\n\nBest,\n{name_first}"
+                    f"Hi {rep_first},\n\nThanks for the {fund_phrase} deck — the "
+                    f"{asset_classes[0].lower()} angle in {geo_phrase} is interesting. "
+                    f"{quote} {_ticket_clause(ticket)}\n\nBest,\n{name_first}"
                 ).strip()
 
             engagements.append(

@@ -27,7 +27,9 @@ def test_fuzzy_fund_matching():
     assert unmatched[0]["raw"] == "Some Random Fund"
 
 
-def _upsert(store, contact_id, call_id, date, funds, sentiment, ticket, quote, industries):
+def _upsert(store, contact_id, call_id, date, funds, sentiment, ticket, quote,
+            asset_classes, sectors=None, geographies=None, currency=None,
+            fund_size=None, cap=None):
     store.upsert_signal(
         contact_id=contact_id,
         contact_owner_id="rep1",
@@ -38,7 +40,12 @@ def _upsert(store, contact_id, call_id, date, funds, sentiment, ticket, quote, i
         extraction={
             "call_id": call_id,
             "call_date": date,
-            "industry_or_asset_class": industries,
+            "asset_classes": asset_classes,
+            "gics_sectors": sectors or [],
+            "geographies": geographies or [],
+            "currency": currency,
+            "fund_size_hint": fund_size,
+            "cap_size": cap,
             "sentiment": sentiment,
             "pain_points": [],
             "ticket_size_hint": ticket,
@@ -52,21 +59,36 @@ def test_aggregation_merges_not_overwrites():
     store = Store(db)
     try:
         _upsert(store, "c1", "e1", "2026-06-05T10:00:00+00:00",
-                ["Moonfare Technology Fund"], "positive", None, "keen on tech", ["technology"])
+                ["Moonfare Technology Fund"], "positive", None, "keen on tech",
+                ["Growth Equity"], sectors=["Information Technology"],
+                geographies=["North America"], currency="USD", fund_size="$750M")
         _upsert(store, "c1", "e3", "2026-06-20T10:00:00+00:00",
-                ["Moonfare Buyout Fund III"], "neutral", "$500k", "commit 500k", ["buyout"])
+                ["Moonfare Buyout Fund III"], "neutral", "$500k", "commit 500k",
+                ["Buyout"], sectors=["Industrials"], geographies=["Europe"],
+                currency="EUR", cap="Large-cap")
 
         row = store.query_contacts(fund="Moonfare Technology Fund")[0]
-        # funds accumulate across calls
+        # funds + dimensions accumulate across calls
         assert set(row["funds_mentioned"]) == {
-            "Moonfare Technology Fund",
-            "Moonfare Buyout Fund III",
+            "Moonfare Technology Fund", "Moonfare Buyout Fund III",
         }
-        # "most recent" fields come from the newest call
+        assert set(row["asset_classes"]) == {"Growth Equity", "Buyout"}
+        assert set(row["gics_sectors"]) == {"Information Technology", "Industrials"}
+        assert set(row["geographies"]) == {"North America", "Europe"}
+        assert set(row["currencies"]) == {"USD", "EUR"}
+        # "most recent" scalar fields come from the newest call
         assert row["sentiment_latest"] == "neutral"
         assert row["ticket_size_hint"] == "$500k"
+        assert row["cap_size"] == "Large-cap"
         assert row["last_signal_date"].startswith("2026-06-20")
         assert len(row["evidence"]) == 2
+
+        # new-dimension filters
+        assert len(store.query_contacts(asset_class="Buyout")) == 1
+        assert len(store.query_contacts(geography="Europe")) == 1
+        assert len(store.query_contacts(currency="USD")) == 1
+        assert len(store.query_contacts(cap_size="Large-cap")) == 1
+        assert len(store.query_contacts(asset_class="Secondaries")) == 0
     finally:
         store.close()
         os.remove(db)
@@ -77,10 +99,10 @@ def test_filters_and_incremental_state():
     store = Store(db)
     try:
         _upsert(store, "c1", "e1", "2026-06-05T10:00:00+00:00",
-                ["Moonfare Technology Fund"], "positive", None, "q", ["technology"])
+                ["Moonfare Technology Fund"], "positive", None, "q", ["Growth Equity"])
         assert len(store.query_contacts(sentiment="positive", owner_id="rep1")) == 1
         assert len(store.query_contacts(sentiment="negative")) == 0
-        assert len(store.query_contacts(industry="tech")) == 1
+        assert len(store.query_contacts(asset_class="Growth Equity")) == 1
 
         store.mark_processed("calls", "e1", "c1", "call_owner")
         assert store.is_processed("calls", "e1") is True

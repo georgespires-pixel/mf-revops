@@ -27,7 +27,12 @@ CREATE TABLE IF NOT EXISTS contact_signals (
     contact_id        TEXT PRIMARY KEY,
     contact_owner_id  TEXT,
     funds_mentioned   TEXT NOT NULL DEFAULT '[]',   -- JSON array of canonical names
-    industries        TEXT NOT NULL DEFAULT '[]',   -- JSON array
+    asset_classes     TEXT NOT NULL DEFAULT '[]',   -- JSON array (buyout, VC, ...)
+    gics_sectors      TEXT NOT NULL DEFAULT '[]',   -- JSON array (GICS sectors)
+    geographies       TEXT NOT NULL DEFAULT '[]',   -- JSON array
+    currencies        TEXT NOT NULL DEFAULT '[]',   -- JSON array
+    fund_size_hint    TEXT,                          -- most recent non-null
+    cap_size          TEXT,                          -- buyout cap bucket
     sentiment_latest  TEXT,
     pain_points       TEXT NOT NULL DEFAULT '[]',   -- JSON array (most recent 3-5)
     ticket_size_hint  TEXT,
@@ -101,7 +106,31 @@ class Store:
         self._lock = threading.Lock()
         with self._lock:
             self._conn.executescript(SCHEMA)
+            self._migrate()
             self._conn.commit()
+
+    def _migrate(self) -> None:
+        """Add newer dimension columns to a pre-existing contact_signals table.
+
+        SQLite has no ADD COLUMN IF NOT EXISTS, so check pragma table_info first.
+        """
+        existing = {
+            row["name"]
+            for row in self._conn.execute("PRAGMA table_info(contact_signals)")
+        }
+        additions = {
+            "asset_classes": "TEXT NOT NULL DEFAULT '[]'",
+            "gics_sectors": "TEXT NOT NULL DEFAULT '[]'",
+            "geographies": "TEXT NOT NULL DEFAULT '[]'",
+            "currencies": "TEXT NOT NULL DEFAULT '[]'",
+            "fund_size_hint": "TEXT",
+            "cap_size": "TEXT",
+        }
+        for col, decl in additions.items():
+            if col not in existing:
+                self._conn.execute(
+                    f"ALTER TABLE contact_signals ADD COLUMN {col} {decl}"
+                )
 
     def close(self) -> None:
         with self._lock:
@@ -192,43 +221,40 @@ class Store:
                 "SELECT * FROM contact_signals WHERE contact_id = ?", (contact_id,)
             ).fetchone()
 
-            if row is None:
-                existing = {
-                    "funds": [],
-                    "industries": [],
-                    "pain_points": [],
-                    "evidence": [],
-                    "unmatched": [],
-                    "sentiment_latest": None,
-                    "ticket_size_hint": None,
-                    "last_signal_date": "",
-                }
-            else:
-                existing = {
-                    "funds": json.loads(row["funds_mentioned"]),
-                    "industries": json.loads(row["industries"]),
-                    "pain_points": json.loads(row["pain_points"]),
-                    "evidence": json.loads(row["evidence"]),
-                    "unmatched": json.loads(row["unmatched_funds"]),
-                    "sentiment_latest": row["sentiment_latest"],
-                    "ticket_size_hint": row["ticket_size_hint"],
-                    "last_signal_date": row["last_signal_date"] or "",
-                }
+            def _existing_list(col: str) -> list[str]:
+                return json.loads(row[col]) if row else []
 
-            funds = _dedupe_keep_order(existing["funds"] + matched)
-            industries = _dedupe_keep_order(
-                existing["industries"] + list(extraction.get("industry_or_asset_class", []))
+            # Asset classes: accept the new field, fall back to the legacy name.
+            new_asset_classes = list(
+                extraction.get("asset_classes")
+                or extraction.get("industry_or_asset_class")
+                or []
             )
-            unmatched_all = _dedupe_keep_order(existing["unmatched"] + unmatched)
+            funds = _dedupe_keep_order(_existing_list("funds_mentioned") + matched)
+            asset_classes = _dedupe_keep_order(
+                _existing_list("asset_classes") + new_asset_classes
+            )
+            gics = _dedupe_keep_order(
+                _existing_list("gics_sectors") + list(extraction.get("gics_sectors", []))
+            )
+            geos = _dedupe_keep_order(
+                _existing_list("geographies") + list(extraction.get("geographies", []))
+            )
+            currency_val = extraction.get("currency")
+            currencies = _dedupe_keep_order(
+                _existing_list("currencies") + ([currency_val] if currency_val else [])
+            )
+            unmatched_all = _dedupe_keep_order(
+                _existing_list("unmatched_funds") + unmatched
+            )
 
-            # Pain points: most recent first, keep 3-5.
-            new_pains = list(extraction.get("pain_points", []))
-            pain_points = _dedupe_keep_order(new_pains + existing["pain_points"])[
-                :MAX_PAIN_POINTS
-            ]
+            existing_pains = _existing_list("pain_points")
+            pain_points = _dedupe_keep_order(
+                list(extraction.get("pain_points", [])) + existing_pains
+            )[:MAX_PAIN_POINTS]
 
             # Evidence: append, sort by date desc, keep most recent 1-2.
-            evidence = existing["evidence"]
+            evidence = json.loads(row["evidence"]) if row else []
             quote = extraction.get("evidence_quote") or ""
             if quote:
                 evidence = evidence + [
@@ -241,30 +267,48 @@ class Store:
             evidence.sort(key=lambda e: e.get("call_date") or "", reverse=True)
             evidence = evidence[:MAX_EVIDENCE]
 
-            # "Most recent" fields only update if this call is at least as new.
-            is_newer = call_date >= (existing["last_signal_date"] or "")
-            sentiment_latest = existing["sentiment_latest"]
-            ticket = existing["ticket_size_hint"]
-            if is_newer:
-                if extraction.get("sentiment"):
-                    sentiment_latest = extraction["sentiment"]
-            new_ticket = extraction.get("ticket_size_hint")
-            if new_ticket and (is_newer or not ticket):
-                ticket = new_ticket
+            # "Most recent" scalar fields only update if this call is >= newest.
+            prev_date = (row["last_signal_date"] if row else "") or ""
+            is_newer = call_date >= prev_date
+            sentiment_latest = row["sentiment_latest"] if row else None
+            ticket = row["ticket_size_hint"] if row else None
+            fund_size = row["fund_size_hint"] if row else None
+            cap_size = row["cap_size"] if row else None
+            if is_newer and extraction.get("sentiment"):
+                sentiment_latest = extraction["sentiment"]
+            for field_name, current, key_in in (
+                ("ticket", ticket, "ticket_size_hint"),
+                ("fund_size", fund_size, "fund_size_hint"),
+                ("cap_size", cap_size, "cap_size"),
+            ):
+                new_val = extraction.get(key_in)
+                if new_val and (is_newer or not current):
+                    if field_name == "ticket":
+                        ticket = new_val
+                    elif field_name == "fund_size":
+                        fund_size = new_val
+                    else:
+                        cap_size = new_val
 
-            last_signal_date = max(existing["last_signal_date"] or "", call_date)
+            last_signal_date = max(prev_date, call_date)
 
             c.execute(
                 """
                 INSERT INTO contact_signals (
-                    contact_id, contact_owner_id, funds_mentioned, industries,
+                    contact_id, contact_owner_id, funds_mentioned, asset_classes,
+                    gics_sectors, geographies, currencies, fund_size_hint, cap_size,
                     sentiment_latest, pain_points, ticket_size_hint, evidence,
                     unmatched_funds, last_signal_date, last_synced_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(contact_id) DO UPDATE SET
                     contact_owner_id = excluded.contact_owner_id,
                     funds_mentioned  = excluded.funds_mentioned,
-                    industries       = excluded.industries,
+                    asset_classes    = excluded.asset_classes,
+                    gics_sectors     = excluded.gics_sectors,
+                    geographies      = excluded.geographies,
+                    currencies       = excluded.currencies,
+                    fund_size_hint   = excluded.fund_size_hint,
+                    cap_size         = excluded.cap_size,
                     sentiment_latest = excluded.sentiment_latest,
                     pain_points      = excluded.pain_points,
                     ticket_size_hint = excluded.ticket_size_hint,
@@ -277,7 +321,12 @@ class Store:
                     contact_id,
                     contact_owner_id or (row["contact_owner_id"] if row else None),
                     json.dumps(funds),
-                    json.dumps(industries),
+                    json.dumps(asset_classes),
+                    json.dumps(gics),
+                    json.dumps(geos),
+                    json.dumps(currencies),
+                    fund_size,
+                    cap_size,
                     sentiment_latest,
                     json.dumps(pain_points),
                     ticket,
@@ -291,17 +340,28 @@ class Store:
     # -- queries -----------------------------------------------------------
 
     @staticmethod
-    def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
+    def _jget(row: sqlite3.Row, col: str) -> list[str]:
+        keys = row.keys()
+        return json.loads(row[col]) if col in keys and row[col] else []
+
+    @classmethod
+    def _row_to_dict(cls, row: sqlite3.Row) -> dict[str, Any]:
+        keys = row.keys()
         return {
             "contact_id": row["contact_id"],
             "contact_owner_id": row["contact_owner_id"],
-            "funds_mentioned": json.loads(row["funds_mentioned"]),
-            "industries": json.loads(row["industries"]),
+            "funds_mentioned": cls._jget(row, "funds_mentioned"),
+            "asset_classes": cls._jget(row, "asset_classes"),
+            "gics_sectors": cls._jget(row, "gics_sectors"),
+            "geographies": cls._jget(row, "geographies"),
+            "currencies": cls._jget(row, "currencies"),
+            "fund_size_hint": row["fund_size_hint"] if "fund_size_hint" in keys else None,
+            "cap_size": row["cap_size"] if "cap_size" in keys else None,
             "sentiment_latest": row["sentiment_latest"],
-            "pain_points": json.loads(row["pain_points"]),
+            "pain_points": cls._jget(row, "pain_points"),
             "ticket_size_hint": row["ticket_size_hint"],
-            "evidence": json.loads(row["evidence"]),
-            "unmatched_funds": json.loads(row["unmatched_funds"]),
+            "evidence": cls._jget(row, "evidence"),
+            "unmatched_funds": cls._jget(row, "unmatched_funds"),
             "last_signal_date": row["last_signal_date"],
             "last_synced_at": row["last_synced_at"],
         }
@@ -310,12 +370,16 @@ class Store:
         self,
         *,
         fund: str | None = None,
-        industry: str | None = None,
+        asset_class: str | None = None,
+        sector: str | None = None,
+        geography: str | None = None,
+        currency: str | None = None,
+        cap_size: str | None = None,
         sentiment: str | None = None,
         owner_id: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Query aggregated signals. JSON-array filters are applied in Python
-        (SQLite JSON1 substring filtering is brittle for exact membership)."""
+        """Query aggregated signals. JSON-array membership filters are applied in
+        Python (SQLite JSON1 exact-membership filtering is brittle)."""
         clauses: list[str] = []
         params: list[Any] = []
         if sentiment:
@@ -324,22 +388,52 @@ class Store:
         if owner_id:
             clauses.append("contact_owner_id = ?")
             params.append(owner_id)
+        if cap_size:
+            clauses.append("cap_size = ?")
+            params.append(cap_size)
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        sql = (
-            f"SELECT * FROM contact_signals {where} ORDER BY last_signal_date DESC"
-        )
+        sql = f"SELECT * FROM contact_signals {where} ORDER BY last_signal_date DESC"
         with self._read() as c:
             rows = [self._row_to_dict(r) for r in c.execute(sql, params)]
 
+        def _has(row: dict, key: str, value: str) -> bool:
+            return value in row.get(key, [])
+
         if fund:
-            rows = [r for r in rows if fund in r["funds_mentioned"]]
-        if industry:
-            rows = [
-                r
-                for r in rows
-                if any(industry.lower() in i.lower() for i in r["industries"])
-            ]
+            rows = [r for r in rows if _has(r, "funds_mentioned", fund)]
+        if asset_class:
+            rows = [r for r in rows if _has(r, "asset_classes", asset_class)]
+        if sector:
+            rows = [r for r in rows if _has(r, "gics_sectors", sector)]
+        if geography:
+            rows = [r for r in rows if _has(r, "geographies", geography)]
+        if currency:
+            rows = [r for r in rows if _has(r, "currencies", currency)]
         return rows
+
+    def asset_class_interest(self) -> list[dict[str, Any]]:
+        """% of contacts that expressed interest in each asset class."""
+        rows = self.all_signals()
+        total = len(rows) or 1
+        counts: dict[str, dict[str, int]] = {}
+        for r in rows:
+            positive = r.get("sentiment_latest") == "positive"
+            for ac in r.get("asset_classes", []):
+                d = counts.setdefault(ac, {"contacts": 0, "positive": 0})
+                d["contacts"] += 1
+                if positive:
+                    d["positive"] += 1
+        out = [
+            {
+                "asset_class": ac,
+                "contacts": d["contacts"],
+                "positive": d["positive"],
+                "pct": round(100 * d["contacts"] / total),
+            }
+            for ac, d in counts.items()
+        ]
+        out.sort(key=lambda x: x["contacts"], reverse=True)
+        return out
 
     def all_signals(self) -> list[dict[str, Any]]:
         with self._read() as c:

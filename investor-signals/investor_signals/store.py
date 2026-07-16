@@ -435,6 +435,50 @@ class Store:
         out.sort(key=lambda x: x["contacts"], reverse=True)
         return out
 
+    def overview(self) -> dict[str, Any]:
+        """Aggregates for the Overview dashboard."""
+        rows = self.all_signals()
+        n = len(rows)
+
+        def count_field(list_key: str) -> list[dict[str, Any]]:
+            counts: dict[str, int] = {}
+            for r in rows:
+                for v in r.get(list_key, []):
+                    counts[v] = counts.get(v, 0) + 1
+            return sorted(
+                ({"label": k, "count": v} for k, v in counts.items()),
+                key=lambda x: x["count"],
+                reverse=True,
+            )
+
+        sentiment: dict[str, int] = {}
+        with_signal = 0
+        for r in rows:
+            s = r.get("sentiment_latest") or "unknown"
+            sentiment[s] = sentiment.get(s, 0) + 1
+            if r.get("funds_mentioned") or r.get("asset_classes"):
+                with_signal += 1
+
+        positive = sentiment.get("positive", 0)
+        return {
+            "totals": {
+                "contacts": n,
+                "with_signal": with_signal,
+                "positive": positive,
+                "positive_pct": round(100 * positive / n) if n else 0,
+                "funds": len(count_field("funds_mentioned")),
+            },
+            "sentiment": [
+                {"label": k, "count": v}
+                for k, v in sorted(sentiment.items(), key=lambda x: x[1], reverse=True)
+            ],
+            "asset_class_interest": self.asset_class_interest(),
+            "geographies": count_field("geographies"),
+            "gics_sectors": count_field("gics_sectors"),
+            "currencies": count_field("currencies"),
+            "funds": count_field("funds_mentioned"),
+        }
+
     def all_signals(self) -> list[dict[str, Any]]:
         with self._read() as c:
             return [

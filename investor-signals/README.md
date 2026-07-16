@@ -97,14 +97,26 @@ growth, secondaries, private credit, infrastructure, …), **GICS sector**,
 **geography**, **currency**, **fund size**, and buyout **cap size** — all
 filterable, with an "interest by asset class" summary bar.
 
+### Overview dashboard
+
+The landing tab: KPI tiles (contacts, contacts with a buy signal, positive %,
+funds mentioned) plus charts for interest by asset class, sentiment split,
+geography, top funds, GICS sectors, and currency.
+
 ### Deck fit
 
-Upload a PDF/PPTX and get: a read of the fund (summary, pros/cons, track record,
-main points, what draws investor interest — full narrative with a Claude key,
-key facts extracted from the deck when offline), plus a Low/Medium/High demand
-fit with a **component-by-component breakdown of why**, per-asset-class interest
-%, and named investor evidence. The fit is computed deterministically from the
-signal store, so the score is always explainable.
+Upload a PDF/PPTX and get a read of the fund plus a Low/Medium/High demand fit
+with a **component-by-component breakdown of why**, per-asset-class interest %,
+and named investor evidence. The demand fit is computed deterministically from
+the signal store, so the score is always explainable.
+
+**Deck reading needs an Anthropic key to be accurate.** With `ANTHROPIC_API_KEY`
+set ("AI mode"), Claude reads the deck for the summary, pros/cons, and real track
+record. Without a key ("keyword mode"), the app does *not* summarize the deck —
+it only shows approximate keyword matches (clearly labeled), because regex
+scraping of an arbitrary PDF produces wrong facts (mis-tagged asset classes,
+out-of-context MOIC/IRR). The demand fit and evidence are reliable in both modes
+(they come from the store, not the deck).
 
 ## Connecting real HubSpot (later)
 

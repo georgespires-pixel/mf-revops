@@ -96,6 +96,10 @@ def create_app(config: Config | None = None) -> FastAPI:
             "asset_class_interest": store.asset_class_interest(),
         }
 
+    @app.get("/api/overview")
+    def overview() -> dict[str, Any]:
+        return store.overview()
+
     @app.get("/api/owners")
     def owners() -> list[dict[str, Any]]:
         if hs:

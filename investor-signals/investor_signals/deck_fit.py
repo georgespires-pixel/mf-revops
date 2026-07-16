@@ -66,23 +66,51 @@ _METRIC_PATTERNS = [
 
 
 def _map(text: str, mapping: dict[str, str]) -> list[str]:
+    """Word-boundary keyword match. `text` should be lowercased and space-padded."""
     out: list[str] = []
     for needle, label in mapping.items():
-        if needle in text and label not in out:
+        n = needle.strip()
+        if not n:
+            continue
+        if re.search(r"(?<![a-z0-9])" + re.escape(n) + r"(?![a-z0-9])", text) and label not in out:
             out.append(label)
     return out
 
 
-def deck_facts(deck_text: str) -> dict[str, Any]:
-    """Structured facts pulled from the deck text (regex/keyword; no LLM)."""
+# Tech contexts where "infrastructure" is NOT the infrastructure asset class.
+_INFRA_FALSE_FRIENDS = [
+    "software infrastructure", "cloud infrastructure", "data infrastructure",
+    "it infrastructure", "digital infrastructure", "network infrastructure",
+    "ai infrastructure", "developer infrastructure", "infrastructure software",
+    "infrastructure-as", "payments infrastructure", "api infrastructure",
+]
+
+
+def deck_facts(deck_text: str, *, include_metrics: bool = True) -> dict[str, Any]:
+    """Structured facts pulled from the deck text (regex/keyword; no LLM).
+
+    Approximate by nature — keyword matching can't disambiguate meaning. Used
+    only to give the offline mode *something*; the accurate read comes from the
+    LLM path. `include_metrics=False` suppresses the noisy track-record scrape.
+    """
     text = f" {deck_text.lower()} "
+
+    asset_classes = _map(text, taxonomy.ASSET_CLASS_KEYWORDS)
+    # Drop the Infrastructure asset class if it only appears as a tech phrase.
+    if "Infrastructure" in asset_classes:
+        real_infra = re.search(r"infrastructure\s+(?:fund|strategy|assets?|equity|investing)", text)
+        false_only = any(ff in text for ff in _INFRA_FALSE_FRIENDS)
+        if false_only and not real_infra:
+            asset_classes = [a for a in asset_classes if a != "Infrastructure"]
+
     metrics: list[str] = []
-    for pattern, _label in _METRIC_PATTERNS:
-        for m in re.findall(pattern, deck_text, flags=re.IGNORECASE):
-            frag = m if isinstance(m, str) else " ".join(m)
-            frag = frag.strip()
-            if frag and frag not in metrics:
-                metrics.append(frag)
+    if include_metrics:
+        for pattern, _label in _METRIC_PATTERNS:
+            for m in re.findall(pattern, deck_text, flags=re.IGNORECASE):
+                frag = (m if isinstance(m, str) else " ".join(m)).strip()
+                if frag and frag.lower() not in {x.lower() for x in metrics}:
+                    metrics.append(frag)
+
     currencies = _map(text, taxonomy.CURRENCY_KEYWORDS)
     fund_size = None
     fs = re.search(rf"(?:fund\s*size|target(?:ing)?|raising)\s*(?:of\s*)?({_MONEY})",
@@ -90,13 +118,13 @@ def deck_facts(deck_text: str) -> dict[str, Any]:
     if fs:
         fund_size = fs.group(1).strip()
     return {
-        "asset_classes": _map(text, taxonomy.ASSET_CLASS_KEYWORDS),
+        "asset_classes": asset_classes,
         "gics_sectors": _map(text, taxonomy.GICS_KEYWORDS),
         "geographies": _map(text, taxonomy.GEOGRAPHY_KEYWORDS),
         "currency": currencies[0] if currencies else None,
         "cap_size": (_map(text, taxonomy.CAP_KEYWORDS) or [None])[0],
         "fund_size": fund_size,
-        "metrics": metrics[:8],
+        "metrics": metrics[:6],
     }
 
 
@@ -311,26 +339,37 @@ class DeckFitReporter:
         return json.loads(text)
 
     def assess(self, deck_text: str, signals: list[dict[str, Any]]) -> dict[str, Any]:
-        facts = deck_facts(deck_text)
+        # AI mode reads the deck itself, so it may cite metrics from the narrative;
+        # demand fit still comes from the store. Facts are used for matching only.
+        facts = deck_facts(deck_text, include_metrics=True)
         report = demand_analysis(signals, facts)
         report.update(self._narrative(deck_text))
         report["deck_facts"] = facts
+        report["analysis_mode"] = "ai"
         report["caveats"] = [
             "Fit is categorical with a component breakdown; there is deliberately no numeric score.",
-            "Demand fit is computed from the signal store; the fund read is model-generated from the deck.",
+            "Demand fit is computed from the signal store; the fund read is Claude reading the deck.",
         ]
         return report
 
 
 def heuristic_assess(deck_text: str, signals: list[dict[str, Any]]) -> dict[str, Any]:
-    """Fully offline path: deterministic demand analysis + facts-only deck read."""
-    facts = deck_facts(deck_text)
+    """Fully offline path: reliable demand analysis + an APPROXIMATE keyword read.
+
+    We deliberately do NOT scrape a track record / MOIC offline — regex pulls
+    numbers out of context and is usually wrong. Keyword facts are labeled
+    approximate; the accurate deck read requires an Anthropic key (AI mode).
+    """
+    facts = deck_facts(deck_text, include_metrics=False)  # no fabricated metrics
     report = demand_analysis(signals, facts)
     report.update(_heuristic_narrative(facts))
+    report["track_record"] = ""  # never assert a track record from regex
     report["deck_facts"] = facts
+    report["analysis_mode"] = "keyword"
     report["caveats"] = [
-        "Offline mode: the fund read shows facts extracted from the deck (no model summary). "
-        "Set an Anthropic API key for a full narrative (summary, pros/cons, track record).",
-        "Demand fit is computed from the signal store; fit is categorical with a component breakdown, never a bare number.",
+        "Offline mode: the fund is NOT read by a model. The items below are approximate "
+        "keyword matches from the deck text and may be inaccurate. Set ANTHROPIC_API_KEY "
+        "(and re-run) for an accurate read — summary, pros/cons, and real track record.",
+        "The demand fit and evidence below ARE reliable — they come from your signal store, not the deck.",
     ]
     return report

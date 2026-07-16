@@ -1,0 +1,8 @@
+anthropic>=0.116.0
+requests>=2.31
+fastapi>=0.110
+uvicorn>=0.29
+pyyaml>=6.0
+python-multipart>=0.0.9
+pypdf>=4.0
+python-pptx>=0.6.23

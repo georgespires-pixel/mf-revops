@@ -1,0 +1,40 @@
+# Investor-signals sync scope. Copy to config.yaml and edit.
+# Secrets (HubSpot token, Anthropic key) come from the environment, NOT here.
+
+sync:
+  # "pilot" = one rep, validate extraction quality first (default, recommended).
+  # "team"  = production; resolves all active owners if owner_ids is empty.
+  mode: pilot
+
+  # HubSpot owner IDs to include. Start with ONE rep for the pilot.
+  # In team mode, leave empty to resolve all active owners.
+  owner_ids:
+    - "REPLACE_WITH_REP_OWNER_ID"
+
+  # Inclusive date window (UTC). Start with one month.
+  date_range:
+    start: "2026-06-01"
+    end: "2026-06-30"
+
+  # Which engagement types to pull.
+  object_types:
+    - calls
+    # - emails
+
+extraction:
+  model: claude-opus-4-8
+  # Skip bodies shorter than this (voicemails, one-liners, no-answers).
+  min_body_chars: 80
+
+normalize:
+  # Minimum fuzzy-match score (0-100) to accept a canonical fund match.
+  # Below this, the raw string is kept and flagged "unmatched" for review.
+  match_threshold: 82
+
+store:
+  # SQLite file, resolved relative to this config file.
+  path: "investor_signals.db"
+
+server:
+  host: "127.0.0.1"
+  port: 8000

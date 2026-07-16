@@ -1,0 +1,59 @@
+{
+  "moonfare_technology_fund": {
+    "canonical_name": "Moonfare Technology Fund",
+    "aliases": [
+      "moon for tech fund",
+      "moonfair tech fund",
+      "tech fund",
+      "moonfare tech fund",
+      "moonfare technology"
+    ],
+    "status": "fundraising",
+    "target_size_usd": 100000000
+  },
+  "moonfare_buyout_fund_iii": {
+    "canonical_name": "Moonfare Buyout Fund III",
+    "aliases": [
+      "buyout fund",
+      "buyout iii",
+      "moonfare buyout 3",
+      "moonfare buyout three",
+      "mf buyout iii"
+    ],
+    "status": "fundraising",
+    "target_size_usd": 250000000
+  },
+  "moonfare_infrastructure_fund": {
+    "canonical_name": "Moonfare Infrastructure Fund",
+    "aliases": [
+      "infra fund",
+      "infrastructure fund",
+      "moonfare infra",
+      "moon infrastructure"
+    ],
+    "status": "fundraising",
+    "target_size_usd": 150000000
+  },
+  "moonfare_private_credit_fund": {
+    "canonical_name": "Moonfare Private Credit Fund",
+    "aliases": [
+      "private credit",
+      "credit fund",
+      "moonfare credit",
+      "pc fund"
+    ],
+    "status": "open",
+    "target_size_usd": 120000000
+  },
+  "moonfare_secondaries_fund_ii": {
+    "canonical_name": "Moonfare Secondaries Fund II",
+    "aliases": [
+      "secondaries fund",
+      "secondaries ii",
+      "moonfare secondaries 2",
+      "mf secondaries"
+    ],
+    "status": "closed",
+    "target_size_usd": 300000000
+  }
+}

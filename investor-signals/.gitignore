@@ -1,0 +1,10 @@
+# Local config with real scope/IDs and the local signal store
+config.yaml
+*.db
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/

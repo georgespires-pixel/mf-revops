@@ -59,12 +59,17 @@ class Config:
     server_port: int = 8000
     hubspot_token: str = ""
     anthropic_api_key: str = ""
+    offline_setting: bool | None = None  # None = auto (no Anthropic key -> offline)
 
     @property
-    def anthropic_ready(self) -> bool:
-        # The Anthropic SDK also resolves an `ant auth login` profile, so an
-        # unset env var does not necessarily mean "no credentials".
-        return True
+    def offline(self) -> bool:
+        """Offline MVP mode: no external calls (synthetic data + heuristic deck-fit).
+
+        Explicit config wins; otherwise infer from the absence of an Anthropic key.
+        """
+        if self.offline_setting is not None:
+            return self.offline_setting
+        return not bool(self.anthropic_api_key)
 
     def require_hubspot(self) -> str:
         if not self.hubspot_token:
@@ -115,4 +120,5 @@ def load_config(path: str | os.PathLike[str] | None = None) -> Config:
         server_port=int(server.get("port", 8000)),
         hubspot_token=os.environ.get("HUBSPOT_TOKEN", ""),
         anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY", ""),
+        offline_setting=raw.get("offline"),
     )

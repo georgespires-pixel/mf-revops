@@ -38,9 +38,10 @@ HubSpot (read-only)                 Claude API              Local app
 | `investor_signals/normalize.py` + `canonical_funds.json` | Fuzzy-match extracted fund mentions against the canonical fund list |
 | `investor_signals/store.py` | SQLite store of aggregated per-contact signals; incremental sync state |
 | `investor_signals/sync.py` | Orchestration: pull → extract → normalize → persist |
-| `investor_signals/deck_fit.py` | Deck-fit report generator |
+| `investor_signals/synthetic.py` + `seed.py` | Synthetic calls/emails + offline seed path (MVP, no HubSpot/Claude) |
+| `investor_signals/deck_fit.py` | Deck-fit report (Claude, with an offline keyword heuristic fallback) |
 | `investor_signals/app.py` + `static/index.html` | FastAPI app (sales dashboard + deck upload) |
-| `investor_signals/cli.py` | CLI: `sync`, `serve` |
+| `investor_signals/cli.py` | CLI: `seed`, `sync`, `serve` |
 
 ## Setup
 
@@ -48,16 +49,46 @@ HubSpot (read-only)                 Claude API              Local app
 cd investor-signals
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+cp config.example.yaml config.yaml
+```
 
-cp config.example.yaml config.yaml   # edit scope (rep owner id + month)
+## MVP / demo — synthetic data, no HubSpot, no API key
+
+Get the app running immediately with generated calls & emails:
+
+```bash
+python -m investor_signals seed      # generate synthetic signals into the store
+python -m investor_signals serve     # http://127.0.0.1:8000
+```
+
+`seed` fabricates ~12 investor contacts with realistic call summaries and emails
+(messy fund names to exercise normalization, plus servicing-only records that
+produce no buy signal), then runs them through normalize → aggregate → store.
+Names, emails, and the rep filter are served from a local directory, so the whole
+app works **offline** — the dashboard is populated and the deck-fit tab uses an
+offline keyword-overlap heuristic (still Low/Medium/High with named evidence,
+never a number). `seed` is deterministic; `--contacts N` and `--seed S` tune it.
+
+To sanity-check the *real* Claude extraction against the synthetic bodies:
+
+```bash
+export ANTHROPIC_API_KEY=...          # or `ant auth login`
+python -m investor_signals seed --extract
+```
+
+## Connecting real HubSpot (later)
+
+```bash
 cp .env.example .env                  # add HUBSPOT_TOKEN (read-only); ANTHROPIC_API_KEY
 export $(grep -v '^#' .env | xargs)   # or use your own env loader
 ```
 
 The HubSpot token must be a **read-only** private-app token (contacts/calls/emails/
-owners read scopes only — no write scopes).
+owners read scopes only — no write scopes). Then use `sync` instead of `seed`
+(below). With a real Anthropic key set, deck-fit uses the model instead of the
+offline heuristic.
 
-## Pilot first
+## Syncing real HubSpot data — pilot first
 
 Start with **one rep for one month** to validate extraction quality before syncing
 the whole team. In `config.yaml`:

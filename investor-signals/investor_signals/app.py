@@ -34,23 +34,29 @@ def create_app(config: Config | None = None) -> FastAPI:
         HubSpotClient(config.hubspot_token) if config.hubspot_token else None
     )
 
-    def _join_hubspot(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        if not hs or not rows:
-            for r in rows:
-                r["display_name"] = None
-                r["email"] = None
-                r["lifecycle_stage"] = None
+    def _attach_contact_details(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Attach name/email/lifecycle. Prefers a live HubSpot join; falls back
+        to the local directory (offline MVP with synthetic data)."""
+        if not rows:
             return rows
         ids = [r["contact_id"] for r in rows]
-        contacts = hs.get_contacts(ids)
+        if hs:
+            contacts = hs.get_contacts(ids)
+            for r in rows:
+                props = contacts.get(r["contact_id"], {})
+                name = " ".join(
+                    p for p in [props.get("firstname"), props.get("lastname")] if p
+                ).strip()
+                r["display_name"] = name or None
+                r["email"] = props.get("email")
+                r["lifecycle_stage"] = props.get("lifecyclestage")
+            return rows
+        directory = store.get_contact_directory(ids)
         for r in rows:
-            props = contacts.get(r["contact_id"], {})
-            name = " ".join(
-                p for p in [props.get("firstname"), props.get("lastname")] if p
-            ).strip()
-            r["display_name"] = name or None
-            r["email"] = props.get("email")
-            r["lifecycle_stage"] = props.get("lifecyclestage")
+            d = directory.get(r["contact_id"], {})
+            r["display_name"] = d.get("name")
+            r["email"] = d.get("email")
+            r["lifecycle_stage"] = d.get("lifecycle_stage")
         return rows
 
     @app.get("/")
@@ -62,6 +68,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         return {
             "status": "ok",
             "hubspot_join": hs is not None,
+            "offline": config.offline,
             "store": store.stats(),
         }
 
@@ -71,18 +78,22 @@ def create_app(config: Config | None = None) -> FastAPI:
 
     @app.get("/api/owners")
     def owners() -> list[dict[str, Any]]:
-        if not hs:
-            return []
+        if hs:
+            return [
+                {
+                    "id": str(o["id"]),
+                    "name": " ".join(
+                        p for p in [o.get("firstName"), o.get("lastName")] if p
+                    ).strip()
+                    or o.get("email"),
+                    "email": o.get("email"),
+                }
+                for o in hs.list_active_owners()
+            ]
+        # Offline fallback: owners recorded by the synthetic seed.
         return [
-            {
-                "id": str(o["id"]),
-                "name": " ".join(
-                    p for p in [o.get("firstName"), o.get("lastName")] if p
-                ).strip()
-                or o.get("email"),
-                "email": o.get("email"),
-            }
-            for o in hs.list_active_owners()
+            {"id": o["owner_id"], "name": o["name"], "email": o["email"]}
+            for o in store.list_owners()
         ]
 
     @app.get("/api/contacts")
@@ -95,12 +106,10 @@ def create_app(config: Config | None = None) -> FastAPI:
         rows = store.query_contacts(
             fund=fund, industry=industry, sentiment=sentiment, owner_id=rep
         )
-        return _join_hubspot(rows)
+        return _attach_contact_details(rows)
 
     @app.post("/api/deck-fit")
     async def deck_fit(file: UploadFile = File(...)) -> JSONResponse:
-        if not config.anthropic_ready:
-            raise HTTPException(500, "Anthropic credentials not configured.")
         data = await file.read()
         try:
             deck_text = extract_deck_text(file.filename or "deck", data)
@@ -109,20 +118,27 @@ def create_app(config: Config | None = None) -> FastAPI:
         if not deck_text.strip():
             raise HTTPException(422, "Could not extract any text from the deck.")
 
-        try:
-            reporter = DeckFitReporter(model=config.model)
-            report = reporter.assess(deck_text, store.all_signals())
-        except (anthropic.AnthropicError, TypeError) as exc:
-            # AnthropicError covers API/rate-limit failures; the SDK raises a
-            # bare TypeError when no credential can be resolved.
-            raise HTTPException(
-                502, f"Claude API call failed (check ANTHROPIC_API_KEY): {exc}"
-            ) from exc
+        signals = store.all_signals()
+        if config.offline:
+            # MVP: keyword-overlap heuristic, no external call.
+            from .deck_fit import heuristic_assess
 
-        # Join contact names onto the evidence so the report names investors.
+            report = heuristic_assess(deck_text, signals)
+        else:
+            try:
+                reporter = DeckFitReporter(model=config.model)
+                report = reporter.assess(deck_text, signals)
+            except (anthropic.AnthropicError, TypeError) as exc:
+                # AnthropicError covers API/rate-limit failures; the SDK raises a
+                # bare TypeError when no credential can be resolved.
+                raise HTTPException(
+                    502, f"Claude API call failed (check ANTHROPIC_API_KEY): {exc}"
+                ) from exc
+
+        # Attach contact names to the evidence (live HubSpot or local directory).
         evidence = report.get("evidence", [])
-        if hs and evidence:
-            ids = [e["contact_id"] for e in evidence if e.get("contact_id")]
+        ids = [e["contact_id"] for e in evidence if e.get("contact_id")]
+        if hs and ids:
             contacts_map = hs.get_contacts(ids)
             for e in evidence:
                 props = contacts_map.get(e.get("contact_id", ""), {})
@@ -131,6 +147,12 @@ def create_app(config: Config | None = None) -> FastAPI:
                 ).strip()
                 e["contact_name"] = name or None
                 e["contact_email"] = props.get("email")
+        elif ids:
+            directory = store.get_contact_directory(ids)
+            for e in evidence:
+                d = directory.get(e.get("contact_id", ""), {})
+                e["contact_name"] = d.get("name")
+                e["contact_email"] = d.get("email")
         return JSONResponse(report)
 
     return app

@@ -1,5 +1,11 @@
-# Investor-signals sync scope. Copy to config.yaml and edit.
+# Investor-signals config. Copy to config.yaml and edit.
 # Secrets (HubSpot token, Anthropic key) come from the environment, NOT here.
+
+# MVP / offline mode. When true, the app makes NO external calls: the deck-fit
+# report uses an offline keyword-overlap heuristic, and no Anthropic client is
+# constructed. Leave unset for "auto" (offline when ANTHROPIC_API_KEY is absent).
+# For the synthetic-data MVP you can leave this unset.
+# offline: true
 
 sync:
   # "pilot" = one rep, validate extraction quality first (default, recommended).

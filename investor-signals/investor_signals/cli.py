@@ -37,6 +37,31 @@ def _cmd_sync(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_seed(args: argparse.Namespace) -> int:
+    from .seed import seed_store
+
+    config = load_config(args.config)
+    print(
+        f"Seeding synthetic data: contacts={args.contacts} "
+        f"mode={'real-extraction' if args.extract else 'offline (ground-truth)'} "
+        f"store={config.store_path}"
+    )
+    report = seed_store(
+        config,
+        n_contacts=args.contacts,
+        use_llm=args.extract,
+        reset=not args.no_reset,
+        seed=args.seed,
+    )
+    print(report.summary())
+    if report.errors:
+        print("\nErrors:", file=sys.stderr)
+        for e in report.errors[:20]:
+            print(f"  - {e}", file=sys.stderr)
+    print("\nNow run:  python -m investor_signals serve")
+    return 0
+
+
 def _cmd_serve(args: argparse.Namespace) -> int:
     import uvicorn
 
@@ -63,6 +88,25 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_sync = sub.add_parser("sync", help="Pull, extract, normalize, and persist signals.")
     p_sync.set_defaults(func=_cmd_sync)
+
+    p_seed = sub.add_parser(
+        "seed",
+        help="Populate the store with synthetic calls/emails (MVP, no HubSpot).",
+    )
+    p_seed.add_argument("--contacts", type=int, default=12)
+    p_seed.add_argument("--seed", type=int, default=42, help="RNG seed (deterministic)")
+    p_seed.add_argument(
+        "--extract",
+        action="store_true",
+        help="Run the real Claude extractor over synthetic bodies (needs a key). "
+        "Default is offline, using synthetic ground-truth signals.",
+    )
+    p_seed.add_argument(
+        "--no-reset",
+        action="store_true",
+        help="Append to the existing store instead of recreating it.",
+    )
+    p_seed.set_defaults(func=_cmd_seed)
 
     p_serve = sub.add_parser("serve", help="Run the local web app.")
     p_serve.add_argument("--host", default=None)

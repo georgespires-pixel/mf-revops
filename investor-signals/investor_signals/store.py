@@ -50,6 +50,25 @@ CREATE TABLE IF NOT EXISTS processed_engagements (
     call_owner_id  TEXT,
     processed_at   TEXT NOT NULL
 );
+
+-- Local contact directory. In production, name/email/lifecycle are joined LIVE
+-- from HubSpot at render time and never persisted (they go stale). This table
+-- exists only to make the MVP demoable with synthetic data when HubSpot is not
+-- connected; app.py prefers a live HubSpot join and falls back to this.
+CREATE TABLE IF NOT EXISTS contact_directory (
+    contact_id      TEXT PRIMARY KEY,
+    name            TEXT,
+    email           TEXT,
+    lifecycle_stage TEXT,
+    owner_id        TEXT
+);
+
+-- Owner directory, same rationale (offline fallback for the rep filter).
+CREATE TABLE IF NOT EXISTS owners (
+    owner_id TEXT PRIMARY KEY,
+    name     TEXT,
+    email    TEXT
+);
 """
 
 MAX_PAIN_POINTS = 5
@@ -330,6 +349,58 @@ class Store:
                     "SELECT * FROM contact_signals ORDER BY last_signal_date DESC"
                 )
             ]
+
+    # -- local directory (offline fallback for name/email/rep) -------------
+
+    def upsert_contact_directory(
+        self,
+        contact_id: str,
+        *,
+        name: str | None,
+        email: str | None,
+        lifecycle_stage: str | None,
+        owner_id: str | None,
+    ) -> None:
+        with self._tx() as c:
+            c.execute(
+                """
+                INSERT INTO contact_directory
+                    (contact_id, name, email, lifecycle_stage, owner_id)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(contact_id) DO UPDATE SET
+                    name = excluded.name, email = excluded.email,
+                    lifecycle_stage = excluded.lifecycle_stage,
+                    owner_id = excluded.owner_id
+                """,
+                (contact_id, name, email, lifecycle_stage, owner_id),
+            )
+
+    def get_contact_directory(self, contact_ids: list[str]) -> dict[str, dict[str, Any]]:
+        if not contact_ids:
+            return {}
+        placeholders = ",".join("?" for _ in contact_ids)
+        with self._read() as c:
+            rows = c.execute(
+                f"SELECT * FROM contact_directory WHERE contact_id IN ({placeholders})",
+                contact_ids,
+            ).fetchall()
+        return {r["contact_id"]: dict(r) for r in rows}
+
+    def upsert_owner(self, owner_id: str, name: str | None, email: str | None) -> None:
+        with self._tx() as c:
+            c.execute(
+                """
+                INSERT INTO owners (owner_id, name, email) VALUES (?, ?, ?)
+                ON CONFLICT(owner_id) DO UPDATE SET
+                    name = excluded.name, email = excluded.email
+                """,
+                (owner_id, name, email),
+            )
+
+    def list_owners(self) -> list[dict[str, Any]]:
+        with self._read() as c:
+            rows = c.execute("SELECT * FROM owners ORDER BY name").fetchall()
+        return [dict(r) for r in rows]
 
     def stats(self) -> dict[str, Any]:
         with self._read() as c:

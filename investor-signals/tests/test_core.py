@@ -92,8 +92,62 @@ def test_filters_and_incremental_state():
         os.remove(db)
 
 
+def test_synthetic_generation_is_deterministic_and_excludes_servicing():
+    from investor_signals.synthetic import generate
+
+    engs1, contacts1 = generate(12, seed=42)
+    engs2, _ = generate(12, seed=42)
+    # Deterministic for a fixed seed.
+    assert [e.call_id for e in engs1] == [e.call_id for e in engs2]
+    assert len(contacts1) == 12
+    # Servicing engagements exist and carry no buy signal.
+    servicing = [e for e in engs1 if not e.truth["funds_mentioned"] and e.title != ""]
+    assert any(
+        e.truth["sentiment"] == "neutral" and not e.truth["funds_mentioned"]
+        for e in servicing
+    )
+    # Messy fund variants are present (so normalization has real work).
+    all_funds = [f for e in engs1 for f in e.truth["funds_mentioned"]]
+    assert any(f not in {  # at least one non-canonical variant
+        "Moonfare Technology Fund", "Moonfare Buyout Fund III",
+        "Moonfare Infrastructure Fund", "Moonfare Private Credit Fund",
+        "Moonfare Secondaries Fund II",
+    } for f in all_funds)
+
+
+def test_seed_store_offline_populates_directory_and_signals():
+    from investor_signals.config import Config, SyncScope
+    from investor_signals.seed import seed_store
+
+    db = tempfile.mktemp(suffix=".db")
+    cfg = Config(scope=SyncScope(), store_path=db)
+    try:
+        report = seed_store(cfg, n_contacts=12, use_llm=False, seed=42)
+        assert report.signals_written > 0
+        assert report.servicing_skipped > 0  # servicing produced no signal
+
+        store = Store(db)
+        try:
+            rows = store.query_contacts()
+            assert rows, "expected seeded signals"
+            # Directory lookup works (names available offline).
+            directory = store.get_contact_directory([r["contact_id"] for r in rows])
+            assert any(d.get("name") for d in directory.values())
+            assert len(store.list_owners()) == 3
+            # Normalization resolved messy variants to canonical names.
+            for r in rows:
+                for f in r["funds_mentioned"]:
+                    assert f.startswith("Moonfare ")
+        finally:
+            store.close()
+    finally:
+        os.remove(db)
+
+
 if __name__ == "__main__":
     test_fuzzy_fund_matching()
     test_aggregation_merges_not_overwrites()
     test_filters_and_incremental_state()
+    test_synthetic_generation_is_deterministic_and_excludes_servicing()
+    test_seed_store_offline_populates_directory_and_signals()
     print("ALL TESTS PASSED")

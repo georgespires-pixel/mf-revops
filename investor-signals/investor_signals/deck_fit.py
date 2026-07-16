@@ -119,6 +119,85 @@ def _mark_stale(signals: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return compact
 
 
+def heuristic_assess(deck_text: str, signals: list[dict[str, Any]]) -> dict[str, Any]:
+    """Offline deck-fit: keyword overlap between the deck and stored demand.
+
+    Used in MVP/offline mode (no Claude key). Honest by construction — it returns
+    a categorical Low/Medium/High with named evidence, and a caveat stating it's a
+    keyword-overlap heuristic, not a model assessment. Still never a bare score.
+    """
+    from .normalize import _load_canonical  # local import to avoid cycle at import
+
+    text = deck_text.lower()
+    dataset = _mark_stale(signals)
+
+    # Which canonical funds does the deck reference (by name or alias)?
+    matched_funds: list[str] = []
+    for fund in _load_canonical().values():
+        needles = [fund["canonical_name"].lower()] + [
+            a.lower() for a in fund.get("aliases", [])
+        ]
+        if any(n in text for n in needles):
+            matched_funds.append(fund["canonical_name"])
+
+    # Which industries present in the store does the deck reference?
+    all_inds = {i for s in dataset for i in s.get("industries", [])}
+    matched_inds = sorted(i for i in all_inds if i.lower() in text)
+
+    evidence: list[dict[str, Any]] = []
+    strong = 0
+    for s in dataset:
+        fund_overlap = sorted(set(s.get("funds_mentioned", [])) & set(matched_funds))
+        ind_overlap = sorted(set(s.get("industries", [])) & set(matched_inds))
+        if not fund_overlap and not ind_overlap:
+            continue
+        sentiment = s.get("sentiment_latest")
+        if sentiment == "positive" and not s["stale"]:
+            strong += 1
+        quote = ""
+        ev = s.get("evidence") or []
+        if ev:
+            quote = ev[0].get("quote", "")
+        evidence.append(
+            {
+                "contact_id": s["contact_id"],
+                "fund_or_industry": ", ".join(fund_overlap + ind_overlap),
+                "why": f"Signal sentiment: {sentiment or 'unknown'}"
+                + (" (stale)" if s["stale"] else ""),
+                "quote": quote,
+                "stale": s["stale"],
+            }
+        )
+
+    if strong >= 3:
+        level = "High"
+    elif evidence:
+        level = "Medium"
+    else:
+        level = "Low"
+
+    summary = (
+        f"Offline keyword-overlap assessment. The deck references "
+        f"{len(matched_funds)} known fund(s) and {len(matched_inds)} industry theme(s) "
+        f"present in the signal store; {len(evidence)} contact(s) show overlapping "
+        f"demand ({strong} with current positive sentiment)."
+        if evidence
+        else "The deck's themes don't overlap with any current demand in the signal store."
+    )
+    return {
+        "fit_level": level,
+        "summary": summary,
+        "matched_funds": matched_funds,
+        "matched_industries": matched_inds,
+        "evidence": evidence,
+        "caveats": [
+            "Offline heuristic (keyword overlap), not a model assessment — run with "
+            "an Anthropic API key for a nuanced read.",
+            "Fit is categorical by design; there is deliberately no numeric score.",
+        ],
+    }
+
+
 class DeckFitReporter:
     def __init__(self, model: str = "claude-opus-4-8", client: anthropic.Anthropic | None = None):
         self._client = client or anthropic.Anthropic()

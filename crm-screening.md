@@ -115,17 +115,28 @@ Create), then store the token as `HUBSPOT_BD_WRITE_TOKEN` in the session env
   "leads schema" scope. Only add `crm.schemas.custom.read` if `GET
   /crm/v3/properties/leads` returns 403.)
 
+**Confirmed Lead-object mapping (HubSpot SANDBOX portal 50160270, verified
+2026-07-21 via `GET /crm/v3/properties/leads`):** the API values differ from the
+display labels — confirm again before pointing at prod.
+
+| Concept | Internal name | Type | Value to write (label) |
+| --- | --- | --- | --- |
+| Business Development | `business_development` | boolean checkbox | `"true"` ("Yes") |
+| Lead type | `hs_lead_type` | enum select | `"NEW_BUSINESS"` ("New business") |
+
 REST calls per approved lead (base `https://api.hubapi.com`, bearer token):
-1. **Discover Lead-object property names once** (then hard-code in the mapping):
-   `GET /crm/v3/properties/leads` → find the internal names for "Business
-   Development" (enum, value `Yes`) and "Lead type" (enum, value `New Business`).
+1. **Discover Lead-object property names once** (done — see table above):
+   `GET /crm/v3/properties/leads`. Note "Business Development" is a *boolean
+   checkbox* (`true`/`false`, not the string "Yes") and "Lead type" is the
+   standard `hs_lead_type` property (enum value `NEW_BUSINESS`, not a custom
+   `lead_type`).
 2. **Set contact lifecycle stage:**
    `PATCH /crm/v3/objects/contacts/{contactId}`
    body `{"properties":{"lifecyclestage":"marketingqualifiedlead"}}`.
 3. **Find the associated Lead, then set its fields:**
    `GET /crm/v4/objects/contacts/{contactId}/associations/leads` → take the Lead
    id → `PATCH /crm/v3/objects/leads/{leadId}` body
-   `{"properties":{"<business_development>":"Yes","<lead_type>":"New Business"}}`.
+   `{"properties":{"business_development":"true","hs_lead_type":"NEW_BUSINESS"}}`.
 4. **Do NOT set owner** — the native by-country workflow fires on the stage change.
 
 Mirror the token handling in `apps-script/Code.gs` (script property, scoped read

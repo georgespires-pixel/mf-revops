@@ -1,5 +1,5 @@
 {
-  "_comment": "Copy to lead_props.json and fill in the REAL internal names + enum values discovered in the sandbox via `node crm-screening.mjs props leads --grep business` and `--grep \"lead type\"`. Do NOT guess — the sandbox may not mirror prod's custom properties.",
-  "business_development": { "name": "<internal_name>", "value": "Yes" },
-  "lead_type": { "name": "<internal_name>", "value": "New Business" }
+  "_comment": "Copy to lead_props.json and confirm the REAL internal names + enum values via `node crm-screening.mjs props leads --grep business` and `--grep \"lead type\"`. Values below were confirmed in the sandbox (portal 50160270): Business Development is a boolean checkbox ('true', not 'Yes'); Lead Type is the standard hs_lead_type ('NEW_BUSINESS', not 'New Business'). Re-confirm before pointing at prod.",
+  "business_development": { "name": "business_development", "value": "true" },
+  "lead_type": { "name": "hs_lead_type", "value": "NEW_BUSINESS" }
 }

@@ -1,0 +1,5 @@
+{
+  "_comment": "Confirmed in the HubSpot SANDBOX (portalId 50160270) via `props leads` on 2026-07-21. Business Development is a boolean checkbox (value 'true'), Lead Type is the standard hs_lead_type property (enum value 'NEW_BUSINESS' = label 'New business'). Re-confirm before pointing at prod — prod internal names/enums may differ.",
+  "business_development": { "name": "business_development", "value": "true" },
+  "lead_type": { "name": "hs_lead_type", "value": "NEW_BUSINESS" }
+}

@@ -49,10 +49,14 @@ decision logic — follow the playbook.
 - [ ] **Admin: create the sandbox + private-app token** (HubSpot UI action — no
   API can do it). Scopes + click-path in `scripts/README.md`. Then export
   `HUBSPOT_BD_WRITE_TOKEN` in the session.
-- [ ] **Confirm the Leads-object internal names** for Business Development + Lead
-  type (and the "New Business" value) in the sandbox: `passb_hubspot.py props
-  leads`, then fill `scripts/lead_props.json`. Sandbox may not mirror prod.
-- [ ] **Verify Pass B on ONE lead** in the sandbox (`qualify --contact-id <ID>
-  --apply`) before any batch or before pointing at prod.
+- [x] **Confirmed the Leads-object internal names** in the sandbox (portal
+  50160270, 2026-07-21): Business Development = `business_development` (boolean
+  checkbox, value `"true"`), Lead type = `hs_lead_type` (enum `"NEW_BUSINESS"`).
+  Recorded in `scripts/lead_props.json`. **Re-confirm before pointing at prod.**
+- [x] **Verified Pass B on ONE lead** in the sandbox: contact →
+  `marketingqualifiedlead`, lead `business_development=true` +
+  `hs_lead_type=NEW_BUSINESS`, all HTTP 200 and read back correctly.
+- [ ] **Re-confirm the mapping against PROD** and verify on one prod lead before
+  any batch (prod internal names/enums may differ from the sandbox).
 - [ ] Ratify the qualification rubric (weights + threshold) with Yijia/BD.
 - [ ] (Optional) Wire a compliant enrichment API (Apollo/PDL/Clearbit).

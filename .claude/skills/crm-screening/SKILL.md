@@ -46,9 +46,14 @@ decision logic — follow the playbook.
   commands in [`scripts/README.md`](../../../scripts/README.md)). The connected
   HubSpot MCP is read-only and cannot reach the Leads object, so all Pass B
   writes go through this script with the env token `HUBSPOT_BD_WRITE_TOKEN`.
-- [ ] **Admin: create the sandbox + private-app token** (HubSpot UI action — no
-  API can do it). Scopes + click-path in `scripts/README.md`. Then export
-  `HUBSPOT_BD_WRITE_TOKEN` in the session.
+- [x] **Sandbox + private-app token created** (EU sandbox portal 50160270);
+  `HUBSPOT_BD_WRITE_TOKEN` set in the env. NOTE: a web session also needs
+  `api.hubapi.com` added to the environment's **Custom** network allowlist —
+  without it REST calls get a `403 CONNECT` (see `scripts/README.md`).
+- [x] **Verified the full Slack approval loop end-to-end** (2026-07-22): Pass A
+  posted a proposal to `#test-claude` via the Slack MCP → human reacted ✅ →
+  reaction read back → Pass B applied to the sandbox (contact + lead, HTTP 200) →
+  confirmation posted in-thread. Loop mechanics documented in `crm-screening.md`.
 - [x] **Confirmed the Leads-object internal names** in the sandbox (portal
   50160270, 2026-07-21): Business Development = `business_development` (boolean
   checkbox, value `"true"`), Lead type = `hs_lead_type` (enum `"NEW_BUSINESS"`).

@@ -286,19 +286,30 @@ auto-qualifies only `MQL + high confidence + score ≥ 85` (see Config / Phase 2
 
 ### Pass B — Apply (execute approved decisions)
 
-7. **Read approvals** from the Slack thread/reactions. For each ✅ Qualify, perform
-   the qualify action via the chosen **Pass B write path** (private-app REST / n8n
-   — the read-only MCP cannot write either object):
+7. **Read approvals** from the Slack reactions. For each ✅ Qualify, perform the
+   qualify action via the **Pass B write path** (private-app REST — `scripts/passb_hubspot.py`
+   / `node/crm-screening.mjs`; the read-only MCP cannot write either object):
    - **Contact:** `lifecyclestage` → `marketingqualifiedlead`.
-   - **Lead object:** Business Development → `Yes`, Lead type → `New Business`.
+   - **Lead object:** `business_development` → `"true"` (Business Development =
+     Yes), `hs_lead_type` → `"NEW_BUSINESS"` (Lead type = New business).
+     *(Confirmed in sandbox; re-confirm against prod.)*
    - **Do NOT set Contact Owner** — the native HubSpot workflow assigns it by
      `country` once the stage changes. (BPMN `Task_5` stays automated.)
-   Until a write path is live, write nothing and report the proposed changes in the
-   Slack thread. For each ❌ / deferred-as-Skip, record the skip reason but do not
-   change lifecycle.
+   For each ❌ / deferred-as-Skip, record the skip reason but do not change lifecycle.
 8. **Confirm** back in the Slack thread: per-lead ✅ applied / ❌ skipped / ⚠️
    errored, plus a one-line batch summary. Never write outside HubSpot + the
    configured Slack channel.
+
+> **Slack approval loop mechanics (verified end-to-end 2026-07-22 against the
+> sandbox).** In Pass A, post one message per lead and **keep the returned
+> message `ts` mapped to that lead's `contactId`** (the mapping is how Pass B
+> knows which reaction applies to which contact). Embed the `contactId` in the
+> message body too, so the mapping survives across two separate sessions/runs. In
+> Pass B, read each message's reactions (Slack `slack_read_thread` detailed, or
+> `reactions.get`): `white_check_mark` → qualify, `x` → skip, none → defer/re-queue.
+> Apply via REST, then reply in the message's thread with the per-lead result.
+> Proven flow: propose → human ✅ → read reaction → REST write (contact + lead,
+> HTTP 200, verified) → thread confirmation.
 
 > **Two-pass timing.** Pass A and Pass B can be the same session with a wait, or
 > two scheduled runs (propose AM, apply after approvals). Keep them separate so a

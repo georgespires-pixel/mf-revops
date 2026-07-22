@@ -63,5 +63,11 @@ decision logic — follow the playbook.
   `hs_lead_type=NEW_BUSINESS`, all HTTP 200 and read back correctly.
 - [ ] **Re-confirm the mapping against PROD** and verify on one prod lead before
   any batch (prod internal names/enums may differ from the sandbox).
+- [ ] **Confirm the Lead pipeline stage advances on the first prod lead.** Sales
+  works the Lead pipeline board (`hs_pipeline_stage`). Our writes only set the
+  Contact lifecycle + the two Lead flags; in the sandbox that did NOT move
+  `hs_pipeline_stage` (stayed "Pre-Qualified"). Verify a prod workflow advances it
+  to "Marketing Qualified Lead" — if not, add `hs_pipeline_stage` to the Pass B
+  lead PATCH or Sales won't see the qualified leads.
 - [ ] Ratify the qualification rubric (weights + threshold) with Yijia/BD.
 - [ ] (Optional) Wire a compliant enrichment API (Apollo/PDL/Clearbit).

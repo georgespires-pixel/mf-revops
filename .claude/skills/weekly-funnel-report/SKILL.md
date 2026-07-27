@@ -19,8 +19,10 @@ follow the playbook.
    (`Moonfare`, `Moonfare US`, `Moonfare Private Office`). Market = `territory`.
 3. Compute the tables (weekly MQL = cumulative "reached MQL"; market/source MQL =
    current-stage) and post the Slack digest to the channel in the playbook's
-   Config table. **Do not create or update any Google Sheet** for now — just link
-   the source workbook in the post.
+   Config table. **Include the link to the live workbook** (Config → *Live
+   workbook* = the "Automated Funnel and MQLs report", auto-refreshed by the Apps
+   Script). Do **not** create or update any Google Sheet yourself, and do **not**
+   link the old manual source workbook.
 4. Before posting, sanity-check the anchor: the most recent **full** month's
    total should reconcile to the workbook basis (e.g. May 2026 = 451). Flag
    material differences rather than posting silently.

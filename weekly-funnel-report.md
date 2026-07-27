@@ -14,13 +14,16 @@ post it as a Slack digest. Replace the manual "HubSpot CRM export, pulled
 
 ## Delivery
 
-- **Format:** a Slack digest (headline + key tables). No Google Sheet is created
-  or updated for now (the available Google tools can't write into the existing
-  workbook in place; revisit via Apps Script later — see "Future" below).
+- **Format:** a Slack digest (headline + key tables) **plus a link to the live,
+  auto-refreshed workbook**. The Claude routine does not write the sheet itself —
+  the bound Apps Script (`apps-script/Code.gs`) refreshes it every Sunday 19:45,
+  ~15 min before this 20:00 digest.
 - **Destination:** Slack channel (see `## Config` below).
-- **Do NOT link the source workbook in the post** — it is not auto-updated, so a
-  link would point leadership at stale data. (Re-add only once the Apps Script
-  is live and refreshing the workbook.)
+- **Link the live workbook in the post.** The "Automated Funnel and MQLs report"
+  workbook (Config → *Live workbook*) is auto-refreshed by the Apps Script, so its
+  link points leadership at current data. Its `Live …` tabs are the ones the
+  script updates. Do **not** link the old manual source workbook — it is not
+  auto-updated and would point at stale data.
 
 ### In-place workbook refresh (optional, separate from this routine)
 To refresh the **original** workbook weekly, use the Google Apps Script in
@@ -34,7 +37,8 @@ independently of the Claude routine, which stays Slack-only.
 | Setting | Value |
 | --- | --- |
 | Slack channel | `#funnel-and-mql-weekly-update` (ID `C0BAQ5K1UEP`) |
-| Source workbook | `1wkIIX66eDL5h24820dVgyZSIL8TWc-KuwGdH1bQWcQM` |
+| Live workbook (link this in the post) | `1H8knKk8RnXTT22CC_tragza__IoRjkcxEEGmBxJbhXw` — "Automated Funnel and MQLs report", auto-refreshed by `apps-script/Code.gs` (`Live …` tabs) |
+| Source workbook (methodology reference only — do NOT link) | `1wkIIX66eDL5h24820dVgyZSIL8TWc-KuwGdH1bQWcQM` |
 | HubSpot timezone | `Europe/Berlin` (account default — confirmed) |
 | Lookback window | Current + previous 2 full months, plus current partial month/week |
 
@@ -135,8 +139,10 @@ Unresponsive are off-path and excluded; do **not** back-fill prior stages for th
    (e.g. previous digest). Flag any week-over-week swing that looks like a data
    issue rather than a real movement.
 6. **Build the digest** (see format below).
-7. **Deliver** by posting the digest to the configured Slack channel. Do not link
-   the source workbook and do not create or update any Google Sheet.
+7. **Deliver** by posting the digest to the configured Slack channel, **including
+   the link to the live workbook** (Config → *Live workbook*). Do not link the old
+   manual source workbook, and do not create or update any Google Sheet yourself —
+   the Apps Script owns the refresh.
 8. **Do not** publish anything outside the configured Slack channel.
 
 ## Digest format
@@ -162,8 +168,11 @@ UK     ...
 
 WEEKLY TREND (Reg / RVF / MQL cumulative reached)
 w/c <date> ...   (trailing ~8 weeks; mark partial weeks *)
+
+📊 Full tables (live, auto-refreshed): https://docs.google.com/spreadsheets/d/1H8knKk8RnXTT22CC_tragza__IoRjkcxEEGmBxJbhXw/edit
 ```
-(No workbook link — the source sheet is not auto-updated.)
+(Link the **live** "Automated Funnel and MQLs report" workbook, which the Apps
+Script refreshes weekly — not the old manual source sheet.)
 
 ## Notes / caveats to carry into the digest
 - RVF and MQL are defined independently — not a strictly nested cascade.

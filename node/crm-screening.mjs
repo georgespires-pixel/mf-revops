@@ -36,6 +36,9 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import http from 'node:http';
+import https from 'node:https';
+import tls from 'node:tls';
 
 // ---------------------------------------------------------------------------
 // Config
@@ -68,24 +71,59 @@ function fail(msg) {
 }
 
 // ---------------------------------------------------------------------------
+// HTTP layer (proxy-aware)
+// ---------------------------------------------------------------------------
+// Node's built-in fetch ignores HTTPS_PROXY. Inside a Claude Code cloud session
+// all egress is forced through that proxy, so a bare fetch is rejected. We route
+// HTTPS through the proxy via a manual CONNECT tunnel (dependency-free), and fall
+// back to a direct TLS connection when no proxy is set (e.g. running locally).
+const PROXY = process.env.HTTPS_PROXY || process.env.https_proxy || null;
+
+function httpRequest(method, urlStr, headers, bodyStr) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(urlStr);
+    const port = Number(u.port) || 443;
+    const send = (socket) => {
+      const req = https.request(
+        { method, path: u.pathname + u.search, headers: { Host: u.hostname, ...headers },
+          ...(socket ? { createConnection: () => socket } : { host: u.hostname, port }) },
+        (res) => {
+          let data = '';
+          res.on('data', (c) => (data += c));
+          res.on('end', () => resolve({ status: res.statusCode, body: data }));
+        });
+      req.on('error', reject);
+      if (bodyStr) req.write(bodyStr);
+      req.end();
+    };
+    if (!PROXY) return send(null);
+    const pu = new URL(PROXY);
+    const conn = http.request({ host: pu.hostname, port: Number(pu.port), method: 'CONNECT',
+      path: `${u.hostname}:${port}` });
+    conn.on('connect', (res, socket) => {
+      if (res.statusCode !== 200) return reject(new Error(`proxy CONNECT failed: ${res.statusCode}`));
+      const tlsSocket = tls.connect({ socket, servername: u.hostname }, () => send(tlsSocket));
+      tlsSocket.on('error', reject);
+    });
+    conn.on('error', reject);
+    conn.end();
+  });
+}
+
+// ---------------------------------------------------------------------------
 // HubSpot REST client
 // ---------------------------------------------------------------------------
 async function hubspot(method, endpoint, { body, params } = {}) {
   requireToken();
   let url = HUBSPOT_BASE + endpoint;
   if (params) url += '?' + new URLSearchParams(params).toString();
-  const res = await fetch(url, {
-    method,
-    headers: {
-      Authorization: `Bearer ${TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const text = await res.text();
+  const bodyStr = body === undefined ? undefined : JSON.stringify(body);
+  const headers = { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
+  if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);
+  const { status, body: text } = await httpRequest(method, url, headers, bodyStr);
   let data;
   try { data = text ? JSON.parse(text) : {}; } catch { data = text; }
-  return { status: res.status, ok: res.ok, data };
+  return { status, ok: status >= 200 && status < 300, data };
 }
 
 async function getAccount() {
@@ -274,12 +312,11 @@ async function postSlack(text) {
     console.log('\n--- [DRY-RUN Slack message] ---\n' + text + '\n');
     return { dryRun: true };
   }
-  const res = await fetch('https://slack.com/api/chat.postMessage', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${SLACK_TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ channel: SLACK_CHANNEL, text, unfurl_links: false }),
-  });
-  const data = await res.json();
+  const bodyStr = JSON.stringify({ channel: SLACK_CHANNEL, text, unfurl_links: false });
+  const { body: raw } = await httpRequest('POST', 'https://slack.com/api/chat.postMessage',
+    { Authorization: `Bearer ${SLACK_TOKEN}`, 'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(bodyStr) }, bodyStr);
+  let data; try { data = JSON.parse(raw); } catch { data = { ok: false, error: raw }; }
   if (!data.ok) console.error(`Slack post failed: ${data.error}`);
   return data;
 }

@@ -44,3 +44,17 @@ Direct calls to `api.hubapi.com` require outbound network access. In a Claude
 Code **web** session the environment's network policy must include
 `api.hubapi.com` in its **allowed domains**, or every HubSpot REST call returns a
 `403 CONNECT policy denial`. Running locally (your Mac) has no such restriction.
+
+The script is **proxy-aware**: Node's built-in `fetch` ignores `HTTPS_PROXY`, so
+inside a Claude cloud session it would be blocked even with the domain allowed.
+This script routes HTTPS through `HTTPS_PROXY` via a manual CONNECT tunnel
+(dependency-free) when the var is set, and connects directly otherwise. No
+configuration needed either way.
+
+## The qualify action moves BOTH objects
+The Contact lifecycle and the Lead pipeline stage are independent in HubSpot
+(neither cascades to the other). So `qualify` sets **both**: Contact
+`lifecyclestage → marketingqualifiedlead` (funnel/MQL reporting) **and** Lead
+`hs_pipeline_stage →` the "Marketing Qualified Lead" stage (so Sales sees it in
+the Lead pipeline). The MQL stage id lives in `lead_props.json` — re-confirm it
+per portal.

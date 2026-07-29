@@ -1,0 +1,6 @@
+{
+  "_comment": "Confirmed in the HubSpot SANDBOX (portalId 50160270) via `props leads` + pipelines API on 2026-07-29. business_development is a boolean checkbox ('true'); hs_lead_type enum 'NEW_BUSINESS' ('New business'); lead_pipeline_stage is the Lead pipeline's 'Marketing Qualified Lead' stage id (159139484) — set so the Lead moves into the MQL column Sales works, since the Contact lifecycle change does NOT move it. Re-confirm ALL of these (esp. the stage id) against prod; stage ids can differ per portal.",
+  "business_development": { "name": "business_development", "value": "true" },
+  "lead_type": { "name": "hs_lead_type", "value": "NEW_BUSINESS" },
+  "lead_pipeline_stage": { "name": "hs_pipeline_stage", "value": "159139484", "label": "Marketing Qualified Lead" }
+}

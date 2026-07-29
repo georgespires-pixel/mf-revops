@@ -234,13 +234,19 @@ def cmd_qualify(args):
     print(f"    associated lead id = {lead_id}"
           + (f"  (WARNING: {len(lead_ids)} leads, using first)" if len(lead_ids) > 1 else ""))
 
-    # 3) set lead fields
-    print("\n[3] Lead: Business Development -> Yes, Lead type -> New Business")
+    # 3) set lead fields — including the Lead pipeline stage so Sales sees it
+    print("\n[3] Lead: pipeline stage -> Marketing Qualified Lead, "
+          "Business Development -> Yes, Lead type -> New Business")
     if lp:
         props = {
             lp["business_development"]["name"]: lp["business_development"]["value"],
             lp["lead_type"]["name"]: lp["lead_type"]["value"],
         }
+        # Move the Lead through its own pipeline so it lands in the MQL column
+        # (the Contact lifecycle change does NOT do this — verified in sandbox).
+        stage = lp.get("lead_pipeline_stage")
+        if stage:
+            props[stage["name"]] = stage["value"]
     else:
         props = {"<business_development>": "Yes", "<lead_type>": "New Business"}
     if apply and lp:
@@ -264,6 +270,8 @@ def cmd_qualify(args):
               f"{c.get('properties', {}).get('lifecyclestage')}")
         if lp:
             names = [lp["business_development"]["name"], lp["lead_type"]["name"]]
+            if lp.get("lead_pipeline_stage"):
+                names.append(lp["lead_pipeline_stage"]["name"])
             _, l = _request("GET", f"/crm/v3/objects/leads/{lead_id}",
                             params={"properties": ",".join(names)})
             print(f"    lead props = {l.get('properties', {})}")

@@ -63,11 +63,13 @@ decision logic — follow the playbook.
   `hs_lead_type=NEW_BUSINESS`, all HTTP 200 and read back correctly.
 - [ ] **Re-confirm the mapping against PROD** and verify on one prod lead before
   any batch (prod internal names/enums may differ from the sandbox).
-- [ ] **Confirm the Lead pipeline stage advances on the first prod lead.** Sales
-  works the Lead pipeline board (`hs_pipeline_stage`). Our writes only set the
-  Contact lifecycle + the two Lead flags; in the sandbox that did NOT move
-  `hs_pipeline_stage` (stayed "Pre-Qualified"). Verify a prod workflow advances it
-  to "Marketing Qualified Lead" — if not, add `hs_pipeline_stage` to the Pass B
-  lead PATCH or Sales won't see the qualified leads.
+- [x] **Pass B now moves the Lead pipeline stage directly.** Sandbox proved the
+  Contact lifecycle and the Lead `hs_pipeline_stage` are independent (neither
+  cascades), so Pass B sets both: Contact → `marketingqualifiedlead` (reporting)
+  and Lead `hs_pipeline_stage` → "Marketing Qualified Lead" (sandbox id
+  `159139484`, so Sales sees it). Verified end-to-end 2026-07-29.
+- [ ] **Re-confirm the MQL stage id against prod** (`GET /crm/v3/pipelines/leads`)
+  and update `lead_pipeline_stage` in `lead_props.json` — stage ids can differ per
+  portal.
 - [ ] Ratify the qualification rubric (weights + threshold) with Yijia/BD.
 - [ ] (Optional) Wire a compliant enrichment API (Apollo/PDL/Clearbit).

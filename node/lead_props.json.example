@@ -1,5 +1,6 @@
 {
-  "_comment": "Copy to lead_props.json and confirm the REAL internal names + enum values via `node crm-screening.mjs props leads --grep business` and `--grep \"lead type\"`. Values below were confirmed in the sandbox (portal 50160270): Business Development is a boolean checkbox ('true', not 'Yes'); Lead Type is the standard hs_lead_type ('NEW_BUSINESS', not 'New Business'). Re-confirm before pointing at prod.",
+  "_comment": "Copy to lead_props.json and confirm the REAL internal names + values in your portal. Values below were confirmed in the sandbox (portal 50160270): business_development is a boolean checkbox ('true'); hs_lead_type enum 'NEW_BUSINESS'; lead_pipeline_stage is the Lead pipeline's 'Marketing Qualified Lead' stage id (159139484) so the Lead moves into the MQL column Sales works. Re-confirm ALL of these against prod — stage ids can differ per portal.",
   "business_development": { "name": "business_development", "value": "true" },
-  "lead_type": { "name": "hs_lead_type", "value": "NEW_BUSINESS" }
+  "lead_type": { "name": "hs_lead_type", "value": "NEW_BUSINESS" },
+  "lead_pipeline_stage": { "name": "hs_pipeline_stage", "value": "159139484", "label": "Marketing Qualified Lead" }
 }

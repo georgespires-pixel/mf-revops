@@ -290,9 +290,11 @@ auto-qualifies only `MQL + high confidence + score ≥ 85` (see Config / Phase 2
    qualify action via the **Pass B write path** (private-app REST — `scripts/passb_hubspot.py`
    / `node/crm-screening.mjs`; the read-only MCP cannot write either object):
    - **Contact:** `lifecyclestage` → `marketingqualifiedlead`.
-   - **Lead object:** `business_development` → `"true"` (Business Development =
-     Yes), `hs_lead_type` → `"NEW_BUSINESS"` (Lead type = New business).
-     *(Confirmed in sandbox; re-confirm against prod.)*
+   - **Lead object:** `hs_pipeline_stage` → the **"Marketing Qualified Lead"**
+     stage id (sandbox `159139484`) so the Lead moves into the MQL column Sales
+     works; `business_development` → `"true"` (Business Development = Yes);
+     `hs_lead_type` → `"NEW_BUSINESS"` (Lead type = New business).
+     *(Confirmed in sandbox; re-confirm the stage id against prod — it can differ.)*
    - **Do NOT set Contact Owner** — the native HubSpot workflow assigns it by
      `country` once the stage changes. (BPMN `Task_5` stays automated.)
    For each ❌ / deferred-as-Skip, record the skip reason but do not change lifecycle.
@@ -300,19 +302,17 @@ auto-qualifies only `MQL + high confidence + score ≥ 85` (see Config / Phase 2
    errored, plus a one-line batch summary. Never write outside HubSpot + the
    configured Slack channel.
 
-> **Lead pipeline stage — verify on the first prod lead.** Sales works the
-> **Lead pipeline board** (stage `hs_pipeline_stage`), not the Contact list. Our
-> qualify action sets the Contact `lifecyclestage` + the two Lead flags, but does
-> **not** move `hs_pipeline_stage`. In the sandbox, setting the Contact to MQL
-> auto-updated the Lead's mirrored `contact_lifecycle_stage` to
-> `marketingqualifiedlead` but left `hs_pipeline_stage` in "Pre-Qualified"
-> (category `NEW`). The manual BD process relied on a **prod workflow** to
-> advance the Lead pipeline stage on MQL — that workflow is **not** in the
-> sandbox, so it's unverified here. **Checkpoint:** after qualifying ONE prod
-> lead, confirm `hs_pipeline_stage` reaches the "Marketing Qualified Lead" stage.
-> If it does not, add `hs_pipeline_stage` (prod MQL stage id) to the Pass B lead
-> PATCH — otherwise qualified leads stay stuck in "Pre-Qualified" and Sales won't
-> see them.
+> **Lead pipeline stage — now set directly by Pass B.** Sales works the **Lead
+> pipeline board** (`hs_pipeline_stage`), not the Contact list. Verified in the
+> sandbox: the two objects are **independent** — setting the Contact to MQL does
+> NOT move `hs_pipeline_stage`, and moving the Lead stage does NOT change the
+> Contact `lifecyclestage`. So Pass B now sets **both**: Contact
+> `lifecyclestage = marketingqualifiedlead` (for funnel/MQL reporting, which
+> counts contacts) **and** Lead `hs_pipeline_stage` = the "Marketing Qualified
+> Lead" stage (so Sales sees it). Verified end-to-end 2026-07-29: both land at
+> MQL. **Prod note:** re-confirm the MQL stage id (sandbox `159139484`) via
+> `GET /crm/v3/pipelines/leads` before the first prod run — stage ids can differ
+> per portal — and update `lead_pipeline_stage` in `lead_props.json`.
 
 > **Slack approval loop mechanics (verified end-to-end 2026-07-22 against the
 > sandbox).** In Pass A, post one message per lead and **keep the returned

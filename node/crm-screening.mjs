@@ -344,12 +344,18 @@ async function qualify(contactId, { apply = false } = {}) {
   console.log(`    associated lead id = ${leadId}`
     + (leadIds.length > 1 ? `  (WARNING: ${leadIds.length} leads, using first)` : ''));
 
-  // 3) set the Lead fields
-  console.log('\n[3] Lead: Business Development -> Yes, Lead type -> New Business');
+  // 3) set the Lead fields — including the Lead pipeline stage so Sales sees it
+  console.log('\n[3] Lead: pipeline stage -> Marketing Qualified Lead, '
+    + 'Business Development -> Yes, Lead type -> New Business');
   const props = leadProps ? {
     [leadProps.business_development.name]: leadProps.business_development.value,
     [leadProps.lead_type.name]: leadProps.lead_type.value,
   } : { '<business_development>': 'Yes', '<lead_type>': 'New Business' };
+  // Move the Lead through its own pipeline into the MQL column — the Contact
+  // lifecycle change does NOT do this (verified in sandbox).
+  if (leadProps && leadProps.lead_pipeline_stage) {
+    props[leadProps.lead_pipeline_stage.name] = leadProps.lead_pipeline_stage.value;
+  }
   if (apply && leadProps) {
     const { status, ok, data } = await hubspot('PATCH', `/crm/v3/objects/leads/${leadId}`,
       { body: { properties: props } });
@@ -369,6 +375,7 @@ async function qualify(contactId, { apply = false } = {}) {
     console.log(`    contact.lifecyclestage = ${c.data.properties?.lifecyclestage}`);
     if (leadProps) {
       const names = [leadProps.business_development.name, leadProps.lead_type.name];
+      if (leadProps.lead_pipeline_stage) names.push(leadProps.lead_pipeline_stage.name);
       const l = await hubspot('GET', `/crm/v3/objects/leads/${leadId}`,
         { params: { properties: names.join(',') } });
       console.log(`    lead props = ${JSON.stringify(l.data.properties)}`);

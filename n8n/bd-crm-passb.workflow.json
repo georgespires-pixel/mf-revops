@@ -1,0 +1,168 @@
+{
+  "name": "BD CRM Screening — Pass B (reaction → HubSpot)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bd-crm-passb",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Slack event webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "bd-crm-passb"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.body.challenge || 'ok' }}",
+        "options": {}
+      },
+      "id": "respond-node",
+      "name": "Respond (challenge/ack)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "jsClass": "",
+        "jsCode": "// Only act on a ✅ reaction, in the screening channel. Anything else stops here.\nconst CHANNEL = 'C0BA557N4UA'; // #test-claude — change for production\nconst QUALIFY_EMOJI = 'white_check_mark';\nconst b = $input.first().json.body || {};\nconst e = b.event || {};\nif (e.type !== 'reaction_added') return [];\nif (e.reaction !== QUALIFY_EMOJI) return [];\nif (!e.item || e.item.channel !== CHANNEL) return [];\nreturn [{ json: { channel: e.item.channel, ts: e.item.ts, user: e.user } }];"
+      },
+      "id": "gate-node",
+      "name": "Gate: qualify reaction",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://slack.com/api/conversations.history",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "channel", "value": "={{ $json.channel }}" },
+            { "name": "latest", "value": "={{ $json.ts }}" },
+            { "name": "inclusive", "value": "true" },
+            { "name": "limit", "value": "1" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "slack-get-msg",
+      "name": "Get Slack message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 400],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_SLACK_CRED", "name": "Slack Bot Token" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "// The proposal message carries the contact id inside the HubSpot link\n// (.../record/0-1/<contactId>). Parse it — no external state needed.\nconst msg = ($json.messages && $json.messages[0]) || {};\nconst text = msg.text || '';\nconst m = text.match(/0-1\\/(\\d+)/) || text.match(/contact[^0-9]*(\\d{6,})/i);\nif (!m) return [];\nreturn [{ json: { contactId: m[1] } }];"
+      },
+      "id": "extract-contact",
+      "name": "Extract contactId",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 400]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/contacts/{{ $json.contactId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: { lifecyclestage: 'marketingqualifiedlead' } }) }}",
+        "options": {}
+      },
+      "id": "hs-contact",
+      "name": "HubSpot: contact → MQL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 400],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_HUBSPOT_CRED", "name": "HubSpot BD Write" } }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.hubapi.com/crm/v4/objects/contacts/{{ $('Extract contactId').item.json.contactId }}/associations/leads",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "hs-get-lead",
+      "name": "HubSpot: get associated lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 400],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_HUBSPOT_CRED", "name": "HubSpot BD Write" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $json.results || [];\nif (!r.length) return [];\nreturn [{ json: { leadId: r[0].toObjectId } }];"
+      },
+      "id": "extract-lead",
+      "name": "Extract leadId",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 400]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/leads/{{ $json.leadId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: { business_development: 'true', hs_lead_type: 'NEW_BUSINESS', hs_pipeline_stage: '159139484' } }) }}",
+        "options": {}
+      },
+      "id": "hs-lead",
+      "name": "HubSpot: lead → MQL stage + flags",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 400],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_HUBSPOT_CRED", "name": "HubSpot BD Write" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channel: $('Gate: qualify reaction').item.json.channel, thread_ts: $('Gate: qualify reaction').item.json.ts, text: '✅ Applied — contact ' + $('Extract contactId').item.json.contactId + ' set to MQL; Lead moved to Marketing Qualified Lead stage (BD = Yes, Lead type = New Business).' }) }}",
+        "options": {}
+      },
+      "id": "slack-confirm",
+      "name": "Slack: confirm in thread",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1980, 400],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_SLACK_CRED", "name": "Slack Bot Token" } }
+    }
+  ],
+  "connections": {
+    "Slack event webhook": { "main": [[{ "node": "Respond (challenge/ack)", "type": "main", "index": 0 }]] },
+    "Respond (challenge/ack)": { "main": [[{ "node": "Gate: qualify reaction", "type": "main", "index": 0 }]] },
+    "Gate: qualify reaction": { "main": [[{ "node": "Get Slack message", "type": "main", "index": 0 }]] },
+    "Get Slack message": { "main": [[{ "node": "Extract contactId", "type": "main", "index": 0 }]] },
+    "Extract contactId": { "main": [[{ "node": "HubSpot: contact → MQL", "type": "main", "index": 0 }]] },
+    "HubSpot: contact → MQL": { "main": [[{ "node": "HubSpot: get associated lead", "type": "main", "index": 0 }]] },
+    "HubSpot: get associated lead": { "main": [[{ "node": "Extract leadId", "type": "main", "index": 0 }]] },
+    "Extract leadId": { "main": [[{ "node": "HubSpot: lead → MQL stage + flags", "type": "main", "index": 0 }]] },
+    "HubSpot: lead → MQL stage + flags": { "main": [[{ "node": "Slack: confirm in thread", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}

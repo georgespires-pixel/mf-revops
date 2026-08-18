@@ -147,32 +147,68 @@ Unresponsive are off-path and excluded; do **not** back-fill prior stages for th
 
 ## Digest format
 
-```
-Weekly Funnel & MQL — w/c <Mon DD> (pulled <DD Mon YYYY>)
+**This is a strict template, not a loose example. Reproduce the structure below
+exactly, every run.** The layout has drifted between runs before (missing funnel
+header row, empty tables, a duplicated footer). The rules below exist to stop that
+— follow them literally.
 
-HEADLINE
+### Formatting rules (must all hold)
+1. **Compose the message fresh every run.** Do **not** copy a previous digest's
+   text as a starting point — that is how stray footers and orphan code fences
+   leak in. Build the body from the template below.
+2. **Do NOT add any signature or "Sent using Claude" line.** Slack appends that
+   footer automatically. The message body must **end at the workbook-link line** —
+   nothing after it, no trailing ``` fence, no signature.
+3. **Every data table lives in its own fenced code block** (```) that you open
+   immediately before the first row and close immediately after the last row.
+   Never leave a fence open; never nest one table's fence inside another.
+4. **The FUNNEL block MUST start with the column-header row** (`Stage  <M1> <M2>
+   <M3*>  Δ M-A`). No table may be posted with headers but no rows — if a figure
+   is genuinely unavailable, print `—`, never leave the block empty.
+5. Section labels (`HEADLINE`, `FUNNEL …`, `BY MARKET …`, `WEEKLY TREND …`) are
+   italicised with single underscores, exactly as shown.
+6. Mark partial months/weeks with `*` and keep the anchor-check + notes lines.
+
+### Template (fill the `<…>` and `…`, keep everything else verbatim)
+```
+_Weekly Funnel & MQL — w/c <Mon DD YYYY> (pulled <DD Mon YYYY>)_
+
+_HEADLINE_
 <2–4 sentences: biggest WoW / MoM movements, partial-period caveat, one action.>
 
-FUNNEL (last 2 full months + partial)
+_FUNNEL (last 2 full months + partial)_
+```​
 Stage           <M1>   <M2>   <M3*>   Δ M-A
-Registrations    ...
-Pre-Qualified    ...
-MQL              ...
-SQL              ...
-Investor         ...
+Registrations   ...    ...    ...     ...
+Pre-Qualified   ...    ...    ...     ...
+MQL             ...    ...    ...     ...
+SQL             ...    ...    ...     ...
+Investor        ...    ...    ...     ...
+```​
 
-BY MARKET (Reg / RVF% / MQL, <M2> vs <M1>)
-US     ...
-UK     ...
-... (seven markets) ...
+_BY MARKET (Reg / RVF% / MQL, <M1> → <M2>)_
+```​
+Market    Reg (<M1>→<M2>)   RVF% (<M1>→<M2>)   MQL (<M1>→<M2>)
+US        ...               ...                ...
+UK        ...               ...                ...
+... (seven markets: US, UK, DACH, BeNeLux, APAC, ROW, Israel) ...
+```​
 
-WEEKLY TREND (Reg / RVF / MQL cumulative reached)
-w/c <date> ...   (trailing ~8 weeks; mark partial weeks *)
+_WEEKLY TREND (Reg / RVF / MQL cumulative reached)_ — trailing 8 weeks
+```​
+w/c <date>    ...   ...   ...
+... (8 rows; mark the partial closing week with * and a "(partial …)" note) ...
+```​
+
+_Anchor check: <most recent full month recomputes to N vs workbook basis / vs last week's digest — pass, or flag the discrepancy>._
+_Notes: RVF and MQL are defined independently, not a strict cascade. Lifecycle stage is a point-in-time snapshot. Newest month and boundary weeks are partial — read directionally, not as final._
 
 📊 Full tables (live, auto-refreshed): https://docs.google.com/spreadsheets/d/1H8knKk8RnXTT22CC_tragza__IoRjkcxEEGmBxJbhXw/edit
 ```
-(Link the **live** "Automated Funnel and MQLs report" workbook, which the Apps
-Script refreshes weekly — not the old manual source sheet.)
+(The `​` marks above the inner ``` fences are only to show fence boundaries in
+this doc — the real message uses plain triple-backticks. Link the **live**
+"Automated Funnel and MQLs report" workbook, which the Apps Script refreshes
+weekly — not the old manual source sheet.)
 
 ## Notes / caveats to carry into the digest
 - RVF and MQL are defined independently — not a strictly nested cascade.

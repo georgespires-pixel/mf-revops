@@ -28,6 +28,13 @@ follow the playbook.
    material differences rather than posting silently.
 
 ## Notes
+- **Follow the playbook's "Digest format" as a strict template** — reproduce its
+  structure exactly. Two recurring drift bugs to avoid: (1) the FUNNEL block must
+  keep its column-header row (`Stage  <M1> <M2> <M3*>  Δ M-A`) and no table may be
+  posted empty; (2) **do not add a "Sent using Claude" signature or any trailing
+  ``` fence** — Slack appends the footer itself, and the message body must end at
+  the workbook-link line. Compose the message fresh; never copy a previous
+  digest's text as a starting point.
 - Delivery is **Slack-only** (no email connector). Channel is set in the playbook
   Config table (`#funnel-and-mql-weekly-update`). It's a **private** channel, so the
   Claude Slack app must be a member or posting will fail.

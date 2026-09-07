@@ -45,16 +45,43 @@ independently of the Claude routine, which stays Slack-only.
 ## Definitions (must match the workbook Methodology tab)
 
 ### Registration cohort (VERIFIED — this defines the universe)
-A "registration" = a contact where **both**:
+A "registration" = a contact where **all** of the following hold:
 - `registration_date` falls within the reporting period (this is the cohort key,
   **not** `createdate`), AND
 - `partner_name` is one of **`Moonfare`**, **`Moonfare US`**, **`Moonfare Private
-  Office`** (Moonfare-direct only; excludes partner/offline/imported contacts).
+  Office`** (Moonfare-direct only; excludes partner/offline/imported contacts), AND
+- `email` is **not** a known QA/test address (see exclusion below).
 
 Verified against HubSpot: this reproduces the workbook exactly — May 2026 = 451
 (workbook 451). (Apr = 435 vs 436 and Jun 1–8 = 144 vs 123 differ only because
 live data has moved since the 08-Jun manual snapshot.) Bucket each contact into
 month/week by `registration_date` (weeks commence Monday).
+
+**Test/QA account exclusion (added 07-Sep-2026 — read before every run).** A
+06-Sep-2026 audit found automated E2E/QA test registrations contaminating the
+cohort and rising sharply week over week: 23% of Jul, 39% of Aug, 51% of Sep
+(1–6) 2026 "registrations" were test accounts — enough to flip the reported
+MoM registration trend from growth to decline once removed. Exclude any
+contact whose `email`:
+- is on the **`@mf.com`** domain (Moonfare's dedicated internal E2E/QA test
+  domain — this alone caught ~94% of the contaminated records found), OR
+- contains a `.external+test` / `+test` pattern in an internal
+  `<name>.external+...@moonfare.com` address (QA staff tagging test runs), OR
+- is a known non-customer test address (e.g. `moonfare@threatspike.com`, the
+  pentest vendor's account).
+
+Implement as a HubSpot search filter: `email` `NOT_CONTAINS_TOKEN` `mf.com`
+(this is the dominant case). Because `CONTAINS_TOKEN`/`NOT_CONTAINS_TOKEN` do
+token-boundary matching, `+test`-tagged `moonfare.com` addresses and one-off
+vendor accounts won't all be caught by a single filter — after pulling the
+cohort, spot-check a sample of the lowest-lifecycle-stage records' emails for
+`test`, `.external+`, or other QA markers, and re-run the count query with
+`lifecyclestage` filters isolated by `EQ` (not `IN`) since combining multiple
+`IN`/`CONTAINS_TOKEN` filters in one HubSpot search call has been observed to
+silently return wrong totals — verify any aggregate count derived that way
+against a raw record pull before trusting it. If test-account volume or
+patterns look like they've shifted since this note was written, flag it
+rather than silently under- or over-excluding.
 
 ### Markets (Territory)
 `US`, `UK`, `DACH`, `BeNeLux`, `APAC`, `ROW`, `Israel`, from the contact's
@@ -124,9 +151,11 @@ Unresponsive are off-path and excluded; do **not** back-fill prior stages for th
    runtime (search keywords `suitability`, `investor_type`).
 3. **Pull the cohort** with `search_crm_objects` on `contacts`, filtered to
    `registration_date` in the period **AND** `partner_name` IN
-   (`Moonfare`, `Moonfare US`, `Moonfare Private Office`). Paginate fully (check
-   `total` — do not stop at one page). Pull: `registration_date`, `partner_name`,
-   `territory`, `lifecyclestage`, `hs_analytics_source`, `country`, suitability
+   (`Moonfare`, `Moonfare US`, `Moonfare Private Office`) **AND** `email`
+   `NOT_CONTAINS_TOKEN` `mf.com` (test/QA exclusion — see above; spot-check for
+   the other test patterns too). Paginate fully (check `total` — do not stop at
+   one page). Pull: `registration_date`, `partner_name`, `email`, `territory`,
+   `lifecyclestage`, `hs_analytics_source`, `country`, suitability
    status, investor type, `your_goals_with_moonfare`,
    `d2i_estimated_financial_portfolio_size`. Bucket by `registration_date`.
 4. **Compute** the tables, applying the definitions above:
@@ -137,7 +166,10 @@ Unresponsive are off-path and excluded; do **not** back-fill prior stages for th
    - Reconcile: market subtotals must sum to the grand total.
 5. **Sanity-check** against last week if a prior run's numbers are available
    (e.g. previous digest). Flag any week-over-week swing that looks like a data
-   issue rather than a real movement.
+   issue rather than a real movement. Explicitly re-check the test-account
+   share of the raw (pre-exclusion) pull each run — if it has grown materially
+   past the 07-Sep-2026 baseline (23%/39%/51% of Jul/Aug/Sep), the exclusion
+   list above may need updating before the numbers can be trusted.
 6. **Build the digest** (see format below).
 7. **Deliver** by posting the digest to the configured Slack channel, **including
    the link to the live workbook** (Config → *Live workbook*). Do not link the old
